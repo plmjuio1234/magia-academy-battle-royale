@@ -9,6 +9,7 @@ import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.magicbr.game.screens.SplashScreen;
 import com.magicbr.game.utils.Assets;
+import com.magicbr.game.utils.Client;
 import com.magicbr.game.utils.FontManager;
 
 public class MagicBattleRoyale extends Game {
@@ -19,6 +20,7 @@ public class MagicBattleRoyale extends Game {
     private AssetManager assetManager;
     private Assets assets;
     private Stage uiStage;
+    private Client client;
 
     @Override
     public void create() {
@@ -29,8 +31,10 @@ public class MagicBattleRoyale extends Game {
 
         Gdx.input.setInputProcessor(uiStage);
 
-        // 에셋 로딩 시작
         assets.loadGameAssets();
+
+        client = new Client();
+        client.connect();
 
         setScreen(new SplashScreen(this));
     }
@@ -42,6 +46,7 @@ public class MagicBattleRoyale extends Game {
 
     @Override
     public void dispose() {
+        if (client != null) client.disconnect();
         super.dispose();
         if (batch != null) batch.dispose();
         if (assets != null) assets.dispose();
@@ -63,5 +68,9 @@ public class MagicBattleRoyale extends Game {
 
     public Stage getUiStage() {
         return uiStage;
+    }
+
+    public Client getClient() {
+        return client;
     }
 }
