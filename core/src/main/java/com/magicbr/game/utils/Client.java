@@ -19,6 +19,7 @@ public class Client {
     private JoinRoomResponse latestJoinRoomResponse = null;
     private RoomUpdateMsg latestRoomUpdate = null;
     private GameStartNotification latestGameStart = null;
+    private PlayerMoveMsg latestPlayerMove = null;
 
     public static class CreateRoomMsg {
         public String roomName;
@@ -97,6 +98,12 @@ public class Client {
         public ChatMsg() {}
     }
 
+    public static class PlayerMoveMsg {
+        public int playerId;
+        public float x, y;
+        public PlayerMoveMsg() {}
+    }
+
     public Client() {
         client = new com.esotericsoftware.kryonet.Client(16384, 8192);
 
@@ -122,6 +129,7 @@ public class Client {
         kryo.register(StartGameMsg.class);
         kryo.register(GameStartNotification.class);
         kryo.register(ChatMsg.class);
+        kryo.register(PlayerMoveMsg.class);
 
         client.addListener(new Listener() {
             @Override
@@ -190,6 +198,10 @@ public class Client {
                 else if (object instanceof ChatMsg) {
                     ChatMsg msg = (ChatMsg) object;
                     System.out.println("[채팅] " + msg.sender + ": " + msg.text);
+                }
+                else if (object instanceof PlayerMoveMsg) {
+                    PlayerMoveMsg msg = (PlayerMoveMsg) object;
+                    latestPlayerMove = msg;
                 }
             }
         });
@@ -331,6 +343,21 @@ public class Client {
         GameStartNotification temp = latestGameStart;
         latestGameStart = null;
         return temp;
+    }
+
+    public PlayerMoveMsg getLatestPlayerMove() {
+        PlayerMoveMsg temp = latestPlayerMove;
+        latestPlayerMove = null;
+        return temp;
+    }
+
+    public void sendPlayerMove(float x, float y) {
+        if (!connected) return;
+
+        PlayerMoveMsg msg = new PlayerMoveMsg();
+        msg.x = x;
+        msg.y = y;
+        client.sendTCP(msg);
     }
 
     public void disconnect() {

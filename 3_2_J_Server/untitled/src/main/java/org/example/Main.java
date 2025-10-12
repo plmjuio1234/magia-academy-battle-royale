@@ -193,6 +193,13 @@ public class Main {
         public ChatMsg() {}
     }
 
+    public static class PlayerMoveMsg {
+        public int playerId;
+        public float x, y;
+
+        public PlayerMoveMsg() {}
+    }
+
     public static void main(String[] args) {
         try {
             Server server = new Server(16384, 8192);
@@ -219,6 +226,7 @@ public class Main {
             kryo.register(StartGameMsg.class);
             kryo.register(GameStartNotification.class);
             kryo.register(ChatMsg.class);
+            kryo.register(PlayerMoveMsg.class);
 
             server.addListener(new Listener() {
                 @Override
@@ -264,7 +272,7 @@ public class Main {
                         }
 
                         GameRoom room = new GameRoom(nextRoomId++, msg.roomName,
-                                msg.maxPlayers, player);
+                            msg.maxPlayers, player);
                         rooms.put(room.roomId, room);
                         player.currentRoom = room;  // 현재 방 설정!
 
@@ -364,6 +372,21 @@ public class Main {
                         if (room != null) {
                             for (PlayerData p : room.players) {
                                 p.connection.sendTCP(msg);
+                            }
+                        }
+                    }
+
+                    else if (object instanceof PlayerMoveMsg) {
+                        PlayerMoveMsg msg = (PlayerMoveMsg) object;
+                        msg.playerId = connection.getID();
+
+                        GameRoom room = player.currentRoom;
+                        if (room != null && room.isPlaying) {
+                            // 같은 방의 다른 플레이어들에게 전송
+                            for (PlayerData p : room.players) {
+                                if (p.id != player.id) {
+                                    p.connection.sendTCP(msg);
+                                }
                             }
                         }
                     }

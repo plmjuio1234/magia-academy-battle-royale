@@ -62,7 +62,7 @@ public class CharacterSelectScreen extends BaseScreen {
         playersListLabel.setFontScale(0.9f);
         playersListLabel.setColor(new Color(0.2f, 0.2f, 0.8f, 1f));
 
-        confirmButton = new TextButton("🚀 게임 시작!", primaryButtonStyle);
+        confirmButton = new TextButton("🚀 게임 시작!(방장만)", primaryButtonStyle);
         confirmButton.getLabel().setFontScale(1.3f);
         confirmButton.addListener(new ClickListener() {
             @Override
