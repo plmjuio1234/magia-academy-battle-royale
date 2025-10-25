@@ -19,10 +19,12 @@ public class Constants {
     public static final int TILE_SIZE = 32;
 
     // 플레이어 설정
-    public static final float PLAYER_SPEED = 200f;
+    public static final float PLAYER_SPEED = 150f;  // 이동속도 감소 (200f -> 150f)
     public static final float PLAYER_SIZE = 64f;
     public static final int PLAYER_MAX_HP = 100;
     public static final int PLAYER_MAX_MP = 100;
+    public static final int PLAYER_INITIAL_LEVEL = 1;  // 초기 레벨
+    public static final int PLAYER_MAX_LEVEL = 5;       // 최대 레벨
 
     // 던전 축소 설정
     public static final float PHASE_1_TIME = 3f * 60f; // 3분
