@@ -1,0 +1,16 @@
+elementals.png
+size: 160, 32
+format: RGBA8888
+filter: Linear, Linear
+repeat: none
+pma: false
+fire
+  bounds: 0, 0, 32, 32
+rack
+  bounds: 32, 0, 32, 32
+thunder
+  bounds: 64, 0, 32, 32
+water
+  bounds: 96, 0, 32, 32
+wind
+  bounds: 128, 0, 32, 32
