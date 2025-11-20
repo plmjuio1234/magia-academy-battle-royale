@@ -1,5 +1,5 @@
 button.png
-size: 184, 256
+size: 496, 128
 format: RGBA8888
 filter: Linear, Linear
 repeat: none
@@ -9,26 +9,30 @@ change-button-defualt
 change-button-hover
   bounds: 92, 0, 92, 32
 exit-button-defualt
-  bounds: 0, 32, 92, 32
+  bounds: 184, 0, 92, 32
 exit-button-hover
-  bounds: 92, 32, 92, 32
+  bounds: 276, 0, 92, 32
 game-start-button-defualt
-  bounds: 0, 64, 92, 32
+  bounds: 368, 0, 92, 32
 game-start-button-hover
-  bounds: 92, 64, 92, 32
+  bounds: 0, 32, 92, 32
 ready-button-defualt
-  bounds: 0, 96, 92, 32
+  bounds: 92, 32, 92, 32
 ready-button-hover
-  bounds: 92, 96, 92, 32
+  bounds: 184, 32, 92, 32
+room-exit-button-defualt
+  bounds: 276, 32, 92, 32
+room-exit-button-hover
+  bounds: 368, 32, 92, 32
 room_out-default
-  bounds: 0, 128, 64, 64
+  bounds: 0, 64, 64, 64
 room_out-hover
-  bounds: 64, 128, 64, 64
+  bounds: 64, 64, 64, 64
 setting-button-defualt
-  bounds: 0, 192, 92, 32
+  bounds: 128, 64, 92, 32
 setting-button-hover
-  bounds: 92, 192, 92, 32
+  bounds: 220, 64, 92, 32
 start-button-defualt
-  bounds: 0, 224, 92, 32
+  bounds: 312, 64, 92, 32
 start-button-hover
-  bounds: 92, 224, 92, 32
+  bounds: 404, 64, 92, 32
