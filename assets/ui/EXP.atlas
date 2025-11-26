@@ -1,0 +1,12 @@
+EXP.png
+size: 96, 32
+format: RGBA8888
+filter: Linear, Linear
+repeat: none
+pma: false
+EXP1
+  bounds: 0, 0, 32, 32
+EXP2
+  bounds: 32, 0, 32, 32
+EXP3
+  bounds: 64, 0, 32, 32

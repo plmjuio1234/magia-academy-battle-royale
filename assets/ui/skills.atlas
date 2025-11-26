@@ -1,0 +1,38 @@
+skills.png
+size: 512, 32
+format: RGBA8888
+filter: Linear, Linear
+repeat: none
+pma: false
+earh-skill1
+  bounds: 0, 0, 32, 32
+earh-skill2
+  bounds: 32, 0, 32, 32
+earh-skill3
+  bounds: 64, 0, 32, 32
+fire-skill1
+  bounds: 96, 0, 32, 32
+fire-skill2
+  bounds: 128, 0, 32, 32
+fire-skill3
+  bounds: 160, 0, 32, 32
+lightning-skill1
+  bounds: 192, 0, 32, 32
+lightning-skill2
+  bounds: 224, 0, 32, 32
+lightning-skill3
+  bounds: 256, 0, 32, 32
+magicwand
+  bounds: 288, 0, 32, 32
+water-skill1
+  bounds: 320, 0, 32, 32
+water-skill2
+  bounds: 352, 0, 32, 32
+water-skill3
+  bounds: 384, 0, 32, 32
+wind-skill1
+  bounds: 416, 0, 32, 32
+wind-skill2
+  bounds: 448, 0, 32, 32
+wind-skill3
+  bounds: 480, 0, 32, 32
