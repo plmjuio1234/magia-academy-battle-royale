@@ -1,0 +1,1150 @@
+package com.example.yugeup.screens;
+
+import com.badlogic.gdx.Game;
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureAtlas;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Skin;
+import com.badlogic.gdx.utils.viewport.FitViewport;
+import com.badlogic.gdx.utils.viewport.Viewport;
+import com.example.yugeup.game.level.LevelUpListener;
+import com.example.yugeup.game.map.GameMap;
+import com.example.yugeup.game.skill.ElementType;
+import com.example.yugeup.ui.ElementSelectOverlay;
+import com.example.yugeup.game.player.Player;
+import com.example.yugeup.game.player.PlayerController;
+import com.example.yugeup.network.MessageHandler;
+import com.example.yugeup.network.NetworkManager;
+import com.example.yugeup.ui.hud.HUDRenderer;
+import com.example.yugeup.ui.hud.LevelUpUpgradePanel;
+import com.example.yugeup.utils.AssetManager;
+import com.example.yugeup.utils.Constants;
+import org.example.Main.*;
+import org.example.MonsterSpawnMsg;
+import org.example.MonsterUpdateMsg;
+import org.example.MonsterDeathMsg;
+import org.example.MonsterDamageMsg;
+import com.example.yugeup.network.messages.SkillCastMsg;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * 게임 화면
+ *
+ * 실제 게임 플레이가 진행되는 메인 화면입니다.
+ * 플레이어, 몬스터, 스킬, UI 등을 렌더링하고 업데이트합니다.
+ *
+ * @author YuGeup Development Team
+ * @version 1.0
+ */
+public class GameScreen implements Screen {
+
+  private Game game;
+  private RoomInfo roomInfo;
+  private List<PlayerInfo> players;
+
+  // 렌더링
+  private SpriteBatch batch;
+  private ShapeRenderer shapeRenderer;
+  private Viewport viewport;
+  private OrthographicCamera camera;
+
+  // 게임 맵 (PHASE_09)
+  private GameMap gameMap;
+
+  // 폰트
+  private BitmapFont font;
+
+  // 캐릭터 아틀라스 및 애니메이션
+  private TextureAtlas characterAtlas;
+  private TextureRegion[] characterFrontFrames;
+  private TextureRegion[] characterBackFrames;
+  private TextureRegion[] characterLeftFrames;
+  private TextureRegion[] characterRightFrames;
+
+  // 애니메이션 타이머
+  private float animationTimer;
+
+  // 현재 플레이어
+  private Player myPlayer;
+  private PlayerController playerController;
+
+  // 원격 플레이어 목록 (playerId -> Player) - PHASE_23
+  private Map<Integer, Player> remotePlayers;
+
+  // 다른 플레이어의 발사체 목록 (네트워크 동기화용)
+  private java.util.List<com.example.yugeup.game.skill.Projectile> otherPlayerProjectiles;
+
+  // 몬스터 관리자 (PHASE_20)
+  private com.example.yugeup.game.monster.MonsterManager monsterManager;
+
+  // 몬스터 HP 동기화 문제 해결용 타임스탬프 맵
+  private Map<Integer, Long> lastDamageTimestamp;
+
+  // HUD 렌더러 (PHASE_11)
+  private HUDRenderer hudRenderer;
+
+  // 원소 선택 오버레이 (PHASE_13)
+  private ElementSelectOverlay elementSelectOverlay;
+  private boolean elementSelected = false; // 원소 선택 완료 여부
+
+  // UI 시스템 (PHASE_19 - 레벨업 업그레이드)
+  private Stage stage;
+  private Skin skin;
+  private LevelUpUpgradePanel levelUpUpgradePanel;
+
+  // 몬스터 스폰 비활성화 플래그
+  private boolean monsterSpawnEnabled = true; // 몬스터 스폰 활성화
+
+  // MonsterData 클래스 제거 - MonsterManager 사용
+
+  // 원격 스킬 이펙트 목록
+  private java.util.List<com.example.yugeup.game.effect.RemoteSkillEffect> remoteSkillEffects;
+
+  /**
+   * GameScreen 생성자
+   *
+   * @param game     Game 인스턴스
+   * @param roomInfo 방 정보
+   * @param players  플레이어 목록
+   */
+  public GameScreen(Game game, RoomInfo roomInfo, List<PlayerInfo> players) {
+    this.game = game;
+    this.roomInfo = roomInfo;
+    this.players = players;
+    this.monsterManager = new com.example.yugeup.game.monster.MonsterManager();
+    this.remotePlayers = new HashMap<>();
+    this.otherPlayerProjectiles = new java.util.ArrayList<>();
+    this.lastDamageTimestamp = new HashMap<>();  // HP 동기화용 타임스탬프 초기화
+    this.remoteSkillEffects = new java.util.ArrayList<>();  // 원격 스킬 이펙트 초기화
+  }
+
+  @Override
+  public void show() {
+    // 렌더링 초기화
+    batch = new SpriteBatch();
+    shapeRenderer = new ShapeRenderer();
+    viewport = new FitViewport(Constants.SCREEN_WIDTH, Constants.SCREEN_HEIGHT);
+    camera = (OrthographicCamera) viewport.getCamera();
+    camera.zoom = 0.05f; // 카메라 줌 인 (0.15 → 0.05, 극도로 확대하여 매우 좁은 시야)
+
+    // 게임 맵 초기화 (PHASE_09)
+    gameMap = new GameMap();
+
+    // 에셋 로드
+    AssetManager assetManager = AssetManager.getInstance();
+    font = assetManager.getFont("font_small");
+    characterAtlas = assetManager.getAtlas("character");
+
+    // 캐릭터 애니메이션 프레임 로드 (4방향 x 4프레임)
+    characterFrontFrames = new TextureRegion[4];
+    characterBackFrames = new TextureRegion[4];
+    characterLeftFrames = new TextureRegion[4];
+    characterRightFrames = new TextureRegion[4];
+
+    for (int i = 0; i < 4; i++) {
+      characterFrontFrames[i] = characterAtlas.findRegion("character-front-" + i);
+      characterBackFrames[i] = characterAtlas.findRegion("character-back-" + i);
+      characterLeftFrames[i] = characterAtlas.findRegion("character-left-" + i);
+      characterRightFrames[i] = characterAtlas.findRegion("character-right-" + i);
+    }
+
+    // 애니메이션 타이머 초기화
+    animationTimer = 0f;
+
+    // 플레이어 초기화 - 맵 중앙 주변에 분산 스폰
+    int myPlayerId = NetworkManager.getInstance().getCurrentPlayerId();
+    myPlayer = new Player(myPlayerId);
+
+    // 맵 중앙을 기준으로 상하좌우 4방향 배치
+    float centerX = gameMap.getWidth() / 2f;
+    float centerY = gameMap.getHeight() / 2f;
+    float spawnRadius = 150f; // 중앙으로부터 150픽셀 떨어진 위치
+
+    // 플레이어 ID를 기반으로 4방향 중 하나로 배치 (0=오른쪽, 1=위, 2=왼쪽, 3=아래)
+    int spawnDirection = myPlayerId % 4;
+    float spawnX = centerX;
+    float spawnY = centerY;
+
+    switch (spawnDirection) {
+      case 0: // 오른쪽
+        spawnX += spawnRadius;
+        break;
+      case 1: // 위
+        spawnY += spawnRadius;
+        break;
+      case 2: // 왼쪽
+        spawnX -= spawnRadius;
+        break;
+      case 3: // 아래
+        spawnY -= spawnRadius;
+        break;
+    }
+
+    myPlayer.setPosition(spawnX, spawnY);
+    System.out.println("[GameScreen] 플레이어 스폰 위치: (" + spawnX + ", " + spawnY + ") - 방향: " +
+        (spawnDirection == 0 ? "오른쪽" : spawnDirection == 1 ? "위" : spawnDirection == 2 ? "왼쪽" : "아래"));
+
+    // 방에 이미 있던 다른 플레이어들 초기화 (PHASE_23)
+    if (players != null) {
+      for (PlayerInfo playerInfo : players) {
+        if (playerInfo.playerId != myPlayerId) {
+          Player remotePlayer = new Player(playerInfo.playerId);
+          remotePlayer.setRemote(true); // 원격 플레이어로 설정 (보간 이동 활성화)
+          remotePlayer.setPosition(spawnX, spawnY);
+          remotePlayers.put(playerInfo.playerId, remotePlayer);
+          System.out.println("[GameScreen] 초기 원격 플레이어 추가: ID=" + playerInfo.playerId);
+        }
+      }
+    }
+
+    // PlayerController 초기화 (viewport 전달)
+    playerController = new PlayerController(myPlayer, viewport);
+    playerController.setGameMap(gameMap); // 벽 충돌 체크를 위한 GameMap 설정
+
+    // 아틀라스 로드
+    TextureAtlas elementalsAtlas = assetManager.getAtlas("elemental");
+    TextureAtlas skillsAtlas = assetManager.getAtlas("skills");
+
+    // 스킬 이펙트 애니메이션 시스템 초기화 (PHASE_24)
+    try {
+      TextureAtlas skillEffectsAtlas = new TextureAtlas(
+          com.badlogic.gdx.Gdx.files.internal("skills/skills.atlas"));
+      com.example.yugeup.game.skill.SkillEffectManager.getInstance().loadAtlas(skillEffectsAtlas);
+      System.out.println("[GameScreen] 스킬 이펙트 애니메이션 시스템 초기화 완료");
+    } catch (Exception e) {
+      System.out.println("[GameScreen] 스킬 이펙트 atlas 로드 실패: " + e.getMessage());
+    }
+
+    // HUD 초기화 (PHASE_11, 스킬 아이콘 아틀라스 포함)
+    hudRenderer = new HUDRenderer(myPlayer, font, elementalsAtlas, skillsAtlas);
+
+    // 원소 선택 오버레이 초기화 (PHASE_13)
+    elementSelectOverlay = new ElementSelectOverlay(myPlayer, font, elementalsAtlas, viewport);
+    elementSelectOverlay.setListener(new ElementSelectOverlay.ElementSelectListener() {
+      @Override
+      public void onElementConfirmed(ElementType element) {
+        elementSelected = true;
+        // 원소 선택 완료 후 HUD 재초기화 (스킬 버튼 생성)
+        TextureAtlas skillsAtlas = assetManager.getAtlas("skills");
+        hudRenderer = new HUDRenderer(myPlayer, font, elementalsAtlas, skillsAtlas);
+
+        // 스킬 버튼 위치 재조정 (viewport 크기 기준)
+        hudRenderer.repositionSkillButtons();
+
+        // HUDRenderer를 PlayerController에 설정
+        playerController.setHUDRenderer(hudRenderer);
+        // PlayerController 활성화
+        Gdx.input.setInputProcessor(playerController);
+
+        // MagicMissile 타게팅 시스템을 MonsterManager와 연결
+        setupMagicMissileTargeting();
+
+        System.out.println("[GameScreen] 원소 선택 완료: " + element.getDisplayName());
+      }
+    });
+
+    // 원소 선택 전에는 입력 프로세서 설정 안 함 (ElementSelectOverlay가 직접 입력 처리)
+
+    // UI 시스템 초기화 (PHASE_19 - 레벨업 업그레이드)
+    stage = new Stage(new FitViewport(Constants.SCREEN_WIDTH, Constants.SCREEN_HEIGHT));
+
+    // UI 스킨 로드 시도 (파일이 없으면 스킵)
+    try {
+      skin = new Skin(Gdx.files.internal(Constants.UI_SKIN_PATH));
+      System.out.println("[GameScreen] UI 스킨 로드 완료");
+    } catch (Exception e) {
+      System.out.println("[GameScreen] UI 스킨 파일을 찾을 수 없습니다: " + e.getMessage());
+      skin = null;  // 나중에 프로그래매틱 스킨 생성 가능
+    }
+
+    // 레벨업 리스너 등록 - 레벨업 시 UI 표시
+    myPlayer.getLevelSystem().addListener(new LevelUpListener() {
+      @Override
+      public void onExpGained(int amount, int currentExp, int maxExp) {
+        // 경험치 획득 이벤트 (현재 미사용)
+      }
+
+      @Override
+      public void onLevelUp(int newLevel) {
+        // 레벨업 시 업그레이드 패널 표시
+        System.out.println("[GameScreen] 레벨업! 현재 레벨: " + newLevel);
+        showLevelUpUpgradePanel(newLevel);
+      }
+    });
+
+    // 몬스터 사망 리스너 설정 (경험치 획득)
+    monsterManager.setDeathListener(new com.example.yugeup.game.monster.MonsterManager.MonsterDeathListener() {
+      @Override
+      public void onMonsterDeath(com.example.yugeup.game.monster.Monster monster) {
+        // 경험치 계산 및 획득
+        int exp = com.example.yugeup.game.level.ExperienceManager.getExpForMonster(monster.getType());
+        myPlayer.getLevelSystem().gainExperience(exp);
+        System.out.println("[GameScreen] 몬스터 처치! +" + exp + " EXP (타입: " + monster.getType() + ")");
+      }
+    });
+
+    // 몬스터에게 GameMap 설정 (벽 충돌 감지)
+    monsterManager.setGameMap(gameMap);
+
+    System.out.println("[GameScreen] 게임 화면 초기화 완료");
+    System.out.println("[GameScreen] 플레이어 ID: " + myPlayerId);
+    System.out.println("[GameScreen] 초기 위치: (" + myPlayer.getX() + ", " + myPlayer.getY() + ")");
+  }
+
+  /**
+   * 레벨업 업그레이드 패널을 표시합니다. (PHASE_19)
+   *
+   * @param newLevel 새 레벨
+   */
+  private void showLevelUpUpgradePanel(int newLevel) {
+    try {
+      // 패널이 없으면 생성
+      if (levelUpUpgradePanel == null) {
+        levelUpUpgradePanel = new LevelUpUpgradePanel(myPlayer, newLevel);
+      }
+
+      // 레벨업 이벤트 호출 (내부에서 show() 호출됨)
+      levelUpUpgradePanel.onLevelUp(newLevel);
+      System.out.println("[GameScreen] 레벨업 업그레이드 패널 표시: 레벨 " + newLevel);
+    } catch (Exception e) {
+      System.out.println("[GameScreen] 레벨업 패널 생성 실패: " + e.getMessage());
+      e.printStackTrace();
+    }
+
+    // ===== 테스트용 몬스터 스폰 (서버에서 관리하므로 비활성화) =====
+    // spawnTestMonsters();
+  }
+
+  /**
+   * MagicMissile 타게팅 시스템을 MonsterManager와 연결합니다.
+   */
+  private void setupMagicMissileTargeting() {
+    // Player의 TargetingSystem에 MonsterManager의 몬스터 리스트 연결
+    com.example.yugeup.game.skill.TargetingSystem targetingSystem = myPlayer.getTargetingSystem();
+    if (targetingSystem == null) {
+      System.out.println("[GameScreen] 경고: TargetingSystem이 null입니다!");
+      return;
+    }
+
+    // MonsterManager의 몬스터 리스트를 TargetingSystem에 설정
+    // 이제 MagicMissile이 가장 가까운 몬스터를 찾을 수 있습니다!
+    targetingSystem.setMonsters(monsterManager.getMonsters());
+
+    System.out.println("[GameScreen] MagicMissile 타게팅 시스템 연결 완료");
+    System.out.println("[GameScreen] 현재 몬스터 수: " + monsterManager.getMonsterCount());
+  }
+
+  /**
+   * 테스트용 몬스터 스폰
+   */
+  private void spawnTestMonsters() {
+    System.out.println("[GameScreen] 테스트 몬스터 스폰 시작");
+
+    // 플레이어 주변에 각 타입의 몬스터 스폰
+    float playerX = myPlayer.getX();
+    float playerY = myPlayer.getY();
+
+    // 고스트 (왼쪽)
+    com.example.yugeup.game.monster.Ghost ghost = new com.example.yugeup.game.monster.Ghost();
+    ghost.setMonsterId(1001);
+    ghost.setPosition(playerX - 150, playerY);
+    monsterManager.addMonster(ghost);
+
+    // 박쥐 (위쪽)
+    com.example.yugeup.game.monster.Bat bat = new com.example.yugeup.game.monster.Bat();
+    bat.setMonsterId(1002);
+    bat.setPosition(playerX, playerY + 150);
+    monsterManager.addMonster(bat);
+
+    // 골렘 (오른쪽)
+    com.example.yugeup.game.monster.Golem golem = new com.example.yugeup.game.monster.Golem();
+    golem.setMonsterId(1003);
+    golem.setPosition(playerX + 150, playerY);
+    monsterManager.addMonster(golem);
+
+    System.out.println("[GameScreen] 테스트 몬스터 " + monsterManager.getMonsterCount() + "마리 스폰 완료");
+  }
+
+  @Override
+  public void render(float delta) {
+    // 배경 클리어 (어두운 회색)
+    Gdx.gl.glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
+    Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+    // 원소 선택 전에는 게임 업데이트 안 함
+    if (!elementSelected) {
+      // 원소 선택 중에도 네트워크 메시지는 처리 (몬스터 동기화)
+      if (monsterSpawnEnabled) {
+        handleMonsterMessages();
+      }
+      handlePlayerMoveMessages();
+
+      // UI용 카메라 설정 (화면 고정, 줌 없음)
+      camera.position.set(Constants.SCREEN_WIDTH / 2, Constants.SCREEN_HEIGHT / 2, 0);
+      camera.zoom = 1.0f;
+      camera.update();
+      batch.setProjectionMatrix(camera.combined);
+      shapeRenderer.setProjectionMatrix(camera.combined);
+
+      // 오버레이 입력 처리
+      elementSelectOverlay.handleInput();
+
+      // 오버레이 렌더링
+      elementSelectOverlay.render(batch, shapeRenderer);
+
+      // 카메라 줌 복원
+      camera.zoom = 0.3f; // 게임 줌과 동일하게 설정
+      return;
+    }
+
+    // 플레이어 컨트롤러 업데이트
+    playerController.update(delta);
+
+    // 원격 플레이어 업데이트 (보간 이동) - PHASE_23
+    for (Player remotePlayer : remotePlayers.values()) {
+      remotePlayer.update(delta);
+    }
+
+    // 몬스터 AI는 서버에서 관리하므로 클라이언트에서는 비활성화
+    // 로컬 AI 대신 서버로부터 받은 위치로 보간 이동만 수행
+    // for (com.example.yugeup.game.monster.Monster monster : monsterManager.getMonsters()) {
+    //   monster.setAITarget(myPlayer.getX(), myPlayer.getY());
+    // }
+
+    // 몬스터 업데이트 (서버 위치로 보간 이동)
+    monsterManager.update(delta);
+
+    // 원격 스킬 이펙트 업데이트
+    java.util.Iterator<com.example.yugeup.game.effect.RemoteSkillEffect> effectIterator = remoteSkillEffects.iterator();
+    while (effectIterator.hasNext()) {
+      com.example.yugeup.game.effect.RemoteSkillEffect effect = effectIterator.next();
+      effect.update(delta);
+      if (!effect.isAlive()) {
+        effectIterator.remove();
+      }
+    }
+
+    // 매직미사일 업데이트 (자동 타게팅 & 발사)
+    if (myPlayer.getMagicMissile() != null) {
+      myPlayer.getMagicMissile().update(delta);
+      myPlayer.getMagicMissile().updateProjectiles(delta);
+    }
+
+    // 원소 스킬 업데이트 (존 및 발사체)
+    if (myPlayer.getElementSkillSet() != null) {
+      java.util.List<com.example.yugeup.game.monster.Monster> monsters = monsterManager.getMonsters();
+
+      for (int i = 0; i < 3; i++) {
+        com.example.yugeup.game.skill.ElementalSkill skill = myPlayer.getElementSkillSet().getSkill(i);
+        if (skill != null) {
+          // 발사체에 몬스터 리스트 주입 (update 전에 먼저!)
+          if (skill instanceof com.example.yugeup.game.skill.fire.Fireball) {
+            for (com.example.yugeup.game.skill.fire.FireballProjectile proj : ((com.example.yugeup.game.skill.fire.Fireball) skill).getActiveProjectiles()) {
+              proj.setMonsterList(monsters);
+            }
+          } else if (skill instanceof com.example.yugeup.game.skill.water.WaterShot) {
+            for (com.example.yugeup.game.skill.water.WaterShotProjectile proj : ((com.example.yugeup.game.skill.water.WaterShot) skill).getActiveProjectiles()) {
+              proj.setMonsterList(monsters);
+            }
+          } else if (skill instanceof com.example.yugeup.game.skill.water.IceSpike) {
+            for (com.example.yugeup.game.skill.water.IceSpikeProjectile proj : ((com.example.yugeup.game.skill.water.IceSpike) skill).getActiveProjectiles()) {
+              proj.setMonsterList(monsters);
+            }
+          } else if (skill instanceof com.example.yugeup.game.skill.wind.AirSlash) {
+            for (com.example.yugeup.game.skill.wind.AirSlashProjectile proj : ((com.example.yugeup.game.skill.wind.AirSlash) skill).getActiveProjectiles()) {
+              proj.setMonsterList(monsters);
+            }
+          } else if (skill instanceof com.example.yugeup.game.skill.earth.RockSmash) {
+            for (com.example.yugeup.game.skill.earth.RockSmashProjectile proj : ((com.example.yugeup.game.skill.earth.RockSmash) skill).getActiveProjectiles()) {
+              proj.setMonsterList(monsters);
+            }
+          } else if (skill instanceof com.example.yugeup.game.skill.lightning.LightningBolt) {
+            for (com.example.yugeup.game.skill.lightning.LightningBoltProjectile proj : ((com.example.yugeup.game.skill.lightning.LightningBolt) skill).getActiveProjectiles()) {
+              proj.setMonsterList(monsters);
+            }
+          } else if (skill instanceof com.example.yugeup.game.skill.lightning.ChainLightning) {
+            for (com.example.yugeup.game.skill.lightning.ChainLightningProjectile proj : ((com.example.yugeup.game.skill.lightning.ChainLightning) skill).getActiveProjectiles()) {
+              proj.setMonsterList(monsters);
+            }
+          }
+
+          // 존에 몬스터 리스트 주입
+          if (skill instanceof com.example.yugeup.game.skill.fire.FlameWave) {
+            for (com.example.yugeup.game.skill.fire.FlameWaveZone zone : ((com.example.yugeup.game.skill.fire.FlameWave) skill).getActiveZones()) {
+              zone.setMonsterList(monsters);
+            }
+          } else if (skill instanceof com.example.yugeup.game.skill.fire.Inferno) {
+            for (com.example.yugeup.game.skill.fire.InfernoZone zone : ((com.example.yugeup.game.skill.fire.Inferno) skill).getActiveZones()) {
+              zone.setMonsterList(monsters);
+            }
+          } else if (skill instanceof com.example.yugeup.game.skill.water.Flood) {
+            for (com.example.yugeup.game.skill.water.FloodZone zone : ((com.example.yugeup.game.skill.water.Flood) skill).getActiveZones()) {
+              zone.setMonsterList(monsters);
+            }
+          } else if (skill instanceof com.example.yugeup.game.skill.wind.Tornado) {
+            for (com.example.yugeup.game.skill.wind.TornadoZone zone : ((com.example.yugeup.game.skill.wind.Tornado) skill).getActiveZones()) {
+              zone.setMonsterList(monsters);
+            }
+          } else if (skill instanceof com.example.yugeup.game.skill.wind.Storm) {
+            for (com.example.yugeup.game.skill.wind.StormZone zone : ((com.example.yugeup.game.skill.wind.Storm) skill).getActiveZones()) {
+              zone.setMonsterList(monsters);
+            }
+          } else if (skill instanceof com.example.yugeup.game.skill.earth.EarthSpike) {
+            for (com.example.yugeup.game.skill.earth.EarthSpikeZone zone : ((com.example.yugeup.game.skill.earth.EarthSpike) skill).getActiveZones()) {
+              zone.setMonsterList(monsters);
+            }
+          } else if (skill instanceof com.example.yugeup.game.skill.lightning.ThunderStorm) {
+            for (com.example.yugeup.game.skill.lightning.ThunderStormZone zone : ((com.example.yugeup.game.skill.lightning.ThunderStorm) skill).getActiveZones()) {
+              zone.setMonsterList(monsters);
+            }
+          }
+
+          // 몬스터 리스트 주입 후 스킬 업데이트
+          skill.update(delta);
+        }
+      }
+    }
+
+    // 게임 맵 업데이트 (PHASE_09)
+    gameMap.update(delta);
+
+    // 애니메이션 타이머 업데이트
+    animationTimer += delta;
+
+    // 몬스터 메시지 처리 (스폰 비활성화 시 무시)
+    if (monsterSpawnEnabled) {
+      handleMonsterMessages();
+    }
+
+    // 발사체 메시지 처리
+    handleProjectileMessages();
+
+    // 다른 플레이어의 발사체 업데이트
+    updateOtherPlayerProjectiles(delta);
+
+    // 플레이어 동기화 메시지 처리 (PHASE_23)
+    handlePlayerMoveMessages();
+
+    // ===== 렌더링 시작 =====
+    // 1. 뷰포트 적용
+    viewport.apply();
+
+    // 2. 카메라를 플레이어 위치로 이동 (모든 렌더링의 기준점)
+    camera.position.set(myPlayer.getX(), myPlayer.getY(), 0);
+    camera.update();
+
+    // 3. projection matrix 설정
+    batch.setProjectionMatrix(camera.combined);
+    shapeRenderer.setProjectionMatrix(camera.combined);
+
+    // 맵 렌더링 (PHASE_09 - 타일 기반)
+    batch.begin();
+    gameMap.render(batch, camera);
+    batch.end();
+
+    // 몬스터 렌더링 (스폰 비활성화 시에도 기존 몬스터는 표시)
+    renderMonsters();
+
+    // 스킬 발사체 렌더링 (몬스터 위에, 플레이어 아래)
+    renderOtherPlayerProjectiles();
+
+    // 원격 플레이어 렌더링 (PHASE_23)
+    renderRemotePlayers();
+
+    // 로컬 플레이어 렌더링 (맨 위에 그려짐)
+    renderPlayer();
+
+    // 스킬 방향 표시기 렌더링 (월드 좌표계)
+    if (hudRenderer != null) {
+      hudRenderer.renderDirectionIndicator(camera);
+    }
+
+    // UI 렌더링 (HUD, 남은 인원, 플레이어 닉네임)
+    renderUI();
+
+    // 조이스틱 렌더링 (맨 마지막, 화면 고정)
+    renderJoystick();
+
+    // 레벨업 업그레이드 패널 처리 - PHASE_19 (이미지 기반)
+    if (levelUpUpgradePanel != null && levelUpUpgradePanel.isVisible()) {
+      // 입력 처리
+      levelUpUpgradePanel.handleInput();
+
+      // 현재 게임 카메라 상태 저장
+      com.badlogic.gdx.math.Vector3 savedPos = new com.badlogic.gdx.math.Vector3(camera.position);
+      float savedZoom = camera.zoom;
+
+      // UI 카메라 설정 (화면 고정 좌표계) - 게임 화면 위에 투명 오버레이로 표시
+      camera.position.set(Constants.SCREEN_WIDTH / 2, Constants.SCREEN_HEIGHT / 2, 0);
+      camera.zoom = 1.0f;
+      camera.update();
+      batch.setProjectionMatrix(camera.combined);
+      shapeRenderer.setProjectionMatrix(camera.combined);
+
+      // 패널 렌더링
+      levelUpUpgradePanel.render(batch, shapeRenderer);
+
+      // 게임 카메라 상태 복원
+      camera.position.set(savedPos);
+      camera.zoom = savedZoom;
+      camera.update();
+      batch.setProjectionMatrix(camera.combined);
+      shapeRenderer.setProjectionMatrix(camera.combined);
+    }
+
+    // UI Stage 렌더링 (레벨업 업그레이드 패널 등) - PHASE_19
+    if (stage != null) {
+      stage.act(delta);
+      stage.draw();
+    }
+  }
+
+  /**
+   * 플레이어 이동 메시지를 처리합니다. (PHASE_23)
+   */
+  private void handlePlayerMoveMessages() {
+    MessageHandler handler = MessageHandler.getInstance();
+    int myPlayerId = NetworkManager.getInstance().getCurrentPlayerId();
+
+    // 서버로부터 받은 모든 PlayerMoveMsg 처리
+    PlayerMoveMsg moveMsg;
+    while ((moveMsg = handler.pollPlayerMoveMsg()) != null) {
+      // 자기 자신의 메시지는 무시
+      if (moveMsg.playerId == myPlayerId) {
+        continue;
+      }
+
+      // 원격 플레이어 가져오기 또는 생성
+      Player remotePlayer = remotePlayers.get(moveMsg.playerId);
+      if (remotePlayer == null) {
+        remotePlayer = new Player(moveMsg.playerId);
+        remotePlayer.setRemote(true); // 원격 플레이어로 설정
+        remotePlayer.setPosition(moveMsg.x, moveMsg.y); // 초기 위치 설정
+        remotePlayers.put(moveMsg.playerId, remotePlayer);
+        // System.out.println("[GameScreen] 원격 플레이어 추가: ID=" + moveMsg.playerId);
+      }
+
+      // 목표 위치 업데이트 (보간으로 부드럽게 이동)
+      remotePlayer.setTargetPosition(moveMsg.x, moveMsg.y);
+    }
+  }
+
+  /**
+   * 몬스터 관련 메시지를 처리합니다.
+   */
+  private void handleMonsterMessages() {
+    MessageHandler handler = MessageHandler.getInstance();
+
+    // 몬스터 스폰 메시지 처리
+    MonsterSpawnMsg spawnMsg;
+    int spawnCount = 0;
+    while ((spawnMsg = handler.pollMonsterSpawnMsg()) != null) {
+      spawnCount++;
+      System.out.println("[GameScreen] ★★★ MonsterSpawnMsg 수신! ID=" + spawnMsg.monsterId + ", Type=" + spawnMsg.monsterType + ", Pos=(" + spawnMsg.x + "," + spawnMsg.y + ")");
+
+      // 서버에서 받은 문자열을 MonsterType으로 변환
+      com.example.yugeup.game.monster.MonsterType monsterType =
+          com.example.yugeup.game.monster.MonsterType.fromString(spawnMsg.monsterType);
+
+      if (monsterType != null) {
+        com.example.yugeup.game.monster.Monster monster =
+            com.example.yugeup.game.monster.MonsterFactory.createMonster(monsterType);
+        monster.setMonsterId(spawnMsg.monsterId);
+        monster.setPosition(spawnMsg.x, spawnMsg.y);
+        monsterManager.addMonster(monster);
+        System.out.println("[GameScreen] 몬스터 스폰 완료: ID=" + spawnMsg.monsterId);
+      } else {
+        System.out.println("[GameScreen] ❌ MonsterType 변환 실패: " + spawnMsg.monsterType);
+      }
+    }
+    if (spawnCount > 0) {
+      System.out.println("[GameScreen] 이번 프레임 총 " + spawnCount + "마리 스폰 처리");
+    }
+
+    // 몬스터 업데이트 메시지 처리 (보간 이동)
+    MonsterUpdateMsg updateMsg;
+    int updateCount = 0;
+    while ((updateMsg = handler.pollMonsterUpdateMsg()) != null) {
+      updateCount++;
+      com.example.yugeup.game.monster.Monster monster = monsterManager.getMonster(updateMsg.monsterId);
+      if (monster != null) {
+        // 서버 위치를 목표 위치로 설정 (부드러운 보간 이동)
+        monster.setTargetPosition(updateMsg.x, updateMsg.y);
+        monster.setMaxHealth(updateMsg.maxHp);
+
+        // HP는 최근 데미지 메시지 후 200ms 경과 시에만 업데이트
+        // (데미지 메시지와 업데이트 메시지의 순서가 뒤바뀌는 문제 방지)
+        Long lastDamage = lastDamageTimestamp.get(updateMsg.monsterId);
+        if (lastDamage == null || System.currentTimeMillis() - lastDamage > 200) {
+          monster.setCurrentHealth(updateMsg.hp);
+        }
+        // 200ms 이내면 DamageMsg의 HP를 우선 신뢰
+      }
+    }
+    // 업데이트 로그는 너무 많아서 주석 처리
+    // if (updateCount > 0) {
+    //   System.out.println("[GameScreen] 몬스터 업데이트 " + updateCount + "개 처리");
+    // }
+
+    // 스킬 시전 메시지 처리 (다른 플레이어의 스킬 이펙트)
+    SkillCastMsg skillMsg;
+    while ((skillMsg = handler.pollSkillCastMsg()) != null) {
+      // 자기 자신의 메시지는 무시
+      if (skillMsg.playerId == NetworkManager.getInstance().getCurrentPlayerId()) {
+        continue;
+      }
+
+      // 원격 플레이어 찾기
+      Player remotePlayer = remotePlayers.get(skillMsg.playerId);
+      if (remotePlayer != null) {
+        // 원격 스킬 이펙트 생성
+        com.example.yugeup.game.effect.RemoteSkillEffect effect =
+          new com.example.yugeup.game.effect.RemoteSkillEffect(
+            skillMsg.skillId,
+            remotePlayer.getX(), remotePlayer.getY(),
+            skillMsg.targetX, skillMsg.targetY
+          );
+        remoteSkillEffects.add(effect);
+      }
+    }
+
+    // 몬스터 사망 메시지 처리
+    MonsterDeathMsg deathMsg;
+    while ((deathMsg = handler.pollMonsterDeathMsg()) != null) {
+      // 경험치 지급: 막타친 플레이어만 경험치 획득
+      int myPlayerId = NetworkManager.getInstance().getCurrentPlayerId();
+      if (deathMsg.killerId == myPlayerId) {
+        com.example.yugeup.game.monster.Monster deadMonster = monsterManager.getMonster(deathMsg.monsterId);
+        if (deadMonster != null) {
+          int exp = com.example.yugeup.game.level.ExperienceManager.getExpForMonster(deadMonster.getType());
+          myPlayer.getLevelSystem().gainExperience(exp);
+          System.out.println("[GameScreen] 몬스터 처치! +" + exp + " EXP (ID=" + deathMsg.monsterId + ", 타입: " + deadMonster.getType() + ")");
+        }
+      }
+
+      monsterManager.removeMonster(deathMsg.monsterId);
+      System.out.println("[GameScreen] 몬스터 사망: ID=" + deathMsg.monsterId);
+    }
+
+    // 몬스터 데미지 메시지 처리
+    MonsterDamageMsg damageMsg;
+    while ((damageMsg = handler.pollMonsterDamageMsg()) != null) {
+      com.example.yugeup.game.monster.Monster monster = monsterManager.getMonster(damageMsg.monsterId);
+      if (monster != null) {
+        monster.setCurrentHealth(damageMsg.newHp);
+        // 데미지 발생 시각 기록 (HP 동기화 우선순위 처리용)
+        lastDamageTimestamp.put(damageMsg.monsterId, System.currentTimeMillis());
+      }
+    }
+  }
+
+  /**
+   * 발사체 메시지를 처리합니다.
+   * 다른 플레이어가 발사한 발사체를 화면에 표시합니다.
+   */
+  private void handleProjectileMessages() {
+    MessageHandler handler = MessageHandler.getInstance();
+
+    com.example.yugeup.network.messages.ProjectileFiredMsg msg;
+    while ((msg = handler.pollProjectileFiredMsg()) != null) {
+      // 자기 자신이 발사한 발사체는 무시 (이미 로컬에서 생성함)
+      if (msg.playerId == myPlayer.getPlayerId()) {
+        System.out.println("[GameScreen] 내 발사체 메시지 무시 (이미 생성됨): Target=" + msg.targetMonsterId);
+        continue;
+      }
+
+      // 타겟 몬스터 찾기
+      com.example.yugeup.game.monster.Monster target = monsterManager.getMonster(msg.targetMonsterId);
+      if (target != null) {
+        // 발사체 생성 (데미지는 시각 효과용이므로 0으로 설정 - 실제 데미지는 서버에서 처리)
+        com.badlogic.gdx.math.Vector2 startPos = new com.badlogic.gdx.math.Vector2(msg.startX, msg.startY);
+        com.example.yugeup.game.skill.Projectile projectile = new com.example.yugeup.game.skill.Projectile(
+            startPos,
+            target,
+            0,  // 데미지 0 (시각 효과용)
+            Constants.MAGIC_MISSILE_SPEED,
+            startPos  // 플레이어 위치 (다른 플레이어의 발사체는 서버 통신 안 함)
+        );
+
+        otherPlayerProjectiles.add(projectile);
+        System.out.println("[GameScreen] 다른 플레이어 발사체 생성: Player=" + msg.playerId + ", Target=" + msg.targetMonsterId);
+      }
+    }
+  }
+
+  /**
+   * 다른 플레이어의 발사체를 업데이트합니다.
+   *
+   * @param delta 프레임 시간 (초)
+   */
+  private void updateOtherPlayerProjectiles(float delta) {
+    // 발사체 업데이트 및 사망한 발사체 제거
+    java.util.Iterator<com.example.yugeup.game.skill.Projectile> iterator = otherPlayerProjectiles.iterator();
+    while (iterator.hasNext()) {
+      com.example.yugeup.game.skill.Projectile projectile = iterator.next();
+      projectile.update(delta);
+
+      if (!projectile.isAlive()) {
+        projectile.dispose();
+        iterator.remove();
+      }
+    }
+  }
+
+  /**
+   * 플레이어를 렌더링합니다.
+   */
+  private void renderPlayer() {
+    // 카메라는 이미 render()에서 설정됨
+    batch.setProjectionMatrix(camera.combined);
+    batch.begin();
+
+    // 플레이어 프레임 선택
+    TextureRegion currentFrame = getCurrentFrame(myPlayer, animationTimer);
+
+    // 플레이어 렌더링 (크기 축소: 64 → 48)
+    float playerWidth = 48;
+    float playerHeight = 48;
+    batch.draw(currentFrame,
+        myPlayer.getX() - playerWidth / 2,
+        myPlayer.getY() - playerHeight / 2,
+        playerWidth, playerHeight);
+
+    batch.end();
+  }
+
+  /**
+   * 원격 플레이어를 렌더링합니다. (PHASE_23)
+   */
+  private void renderRemotePlayers() {
+    batch.begin();
+
+    for (Player remotePlayer : remotePlayers.values()) {
+      TextureRegion frame = getCurrentFrame(remotePlayer, animationTimer);
+
+      float playerWidth = 48;
+      float playerHeight = 48;
+      batch.draw(frame,
+          remotePlayer.getX() - playerWidth / 2,
+          remotePlayer.getY() - playerHeight / 2,
+          playerWidth, playerHeight);
+    }
+
+    batch.end();
+  }
+
+  /**
+   * 현재 애니메이션 프레임을 반환합니다.
+   */
+  private TextureRegion getCurrentFrame(Player player, float stateTime) {
+    // 애니메이션 속도 (0.1초마다 프레임 변경)
+    int frameIndex = (int) ((stateTime % 0.4f) / 0.1f);
+
+    // 정지 상태면 첫 프레임
+    if (player.getVelocity().len() < 0.01f) {
+      frameIndex = 0;
+    }
+
+    // 방향에 따라 프레임 선택
+    switch (player.getDirection()) {
+      case FRONT:
+        return characterFrontFrames[frameIndex];
+      case BACK:
+        return characterBackFrames[frameIndex];
+      case LEFT:
+        return characterLeftFrames[frameIndex];
+      case RIGHT:
+        return characterRightFrames[frameIndex];
+      default:
+        return characterFrontFrames[frameIndex];
+    }
+  }
+
+  /**
+   * 몬스터를 렌더링합니다.
+   */
+  private void renderMonsters() {
+    // MonsterManager의 render 메서드 사용 (Monster 클래스가 자체 렌더링 처리)
+    batch.setProjectionMatrix(camera.combined);
+    batch.begin();
+    monsterManager.render(batch);
+    batch.end();
+  }
+
+  /**
+   * 다른 플레이어의 발사체를 렌더링합니다.
+   */
+  private void renderOtherPlayerProjectiles() {
+    batch.setProjectionMatrix(camera.combined);
+    batch.begin();
+
+    // 다른 플레이어의 발사체 렌더링
+    for (com.example.yugeup.game.skill.Projectile projectile : otherPlayerProjectiles) {
+      if (projectile != null && projectile.isAlive()) {
+        projectile.render(batch);
+      }
+    }
+
+    // 내 매직 미사일 발사체 렌더링
+    if (myPlayer.getMagicMissile() != null) {
+      for (com.example.yugeup.game.skill.Projectile projectile : myPlayer.getMagicMissile().getProjectiles()) {
+        if (projectile != null && projectile.isAlive()) {
+          projectile.render(batch);
+        }
+      }
+    }
+
+    // 원소 스킬 발사체 렌더링 (원소 선택된 경우만)
+    if (myPlayer.getElementSkillSet() != null) {
+      // 스킬 A, B, C 순회
+      for (int i = 0; i < 3; i++) {
+        com.example.yugeup.game.skill.ElementalSkill skill = myPlayer.getElementSkillSet().getSkill(i);
+        if (skill == null)
+          continue;
+
+        // 발사체를 가진 스킬인 경우 렌더링
+        if (skill instanceof com.example.yugeup.game.skill.fire.Fireball) {
+          com.example.yugeup.game.skill.fire.Fireball fireball = (com.example.yugeup.game.skill.fire.Fireball) skill;
+          for (com.example.yugeup.game.skill.fire.FireballProjectile proj : fireball.getActiveProjectiles()) {
+            if (proj != null && proj.isAlive()) {
+              proj.render(batch);
+            }
+          }
+        } else if (skill instanceof com.example.yugeup.game.skill.water.WaterShot) {
+          com.example.yugeup.game.skill.water.WaterShot waterShot = (com.example.yugeup.game.skill.water.WaterShot) skill;
+          for (com.example.yugeup.game.skill.water.WaterShotProjectile proj : waterShot.getActiveProjectiles()) {
+            if (proj != null && proj.isAlive()) {
+              proj.render(batch);
+            }
+          }
+        } else if (skill instanceof com.example.yugeup.game.skill.water.IceSpike) {
+          com.example.yugeup.game.skill.water.IceSpike iceSpike = (com.example.yugeup.game.skill.water.IceSpike) skill;
+          for (com.example.yugeup.game.skill.water.IceSpikeProjectile proj : iceSpike.getActiveProjectiles()) {
+            if (proj != null && proj.isAlive()) {
+              proj.render(batch);
+            }
+          }
+        } else if (skill instanceof com.example.yugeup.game.skill.wind.AirSlash) {
+          com.example.yugeup.game.skill.wind.AirSlash airSlash = (com.example.yugeup.game.skill.wind.AirSlash) skill;
+          for (com.example.yugeup.game.skill.wind.AirSlashProjectile proj : airSlash.getActiveProjectiles()) {
+            if (proj != null && proj.isAlive()) {
+              proj.render(batch);
+            }
+          }
+        } else if (skill instanceof com.example.yugeup.game.skill.earth.RockSmash) {
+          com.example.yugeup.game.skill.earth.RockSmash rockSmash = (com.example.yugeup.game.skill.earth.RockSmash) skill;
+          for (com.example.yugeup.game.skill.earth.RockSmashProjectile proj : rockSmash.getActiveProjectiles()) {
+            if (proj != null && proj.isAlive()) {
+              proj.render(batch);
+            }
+          }
+        } else if (skill instanceof com.example.yugeup.game.skill.lightning.LightningBolt) {
+          com.example.yugeup.game.skill.lightning.LightningBolt lightningBolt = (com.example.yugeup.game.skill.lightning.LightningBolt) skill;
+          for (com.example.yugeup.game.skill.lightning.LightningBoltProjectile proj : lightningBolt.getActiveProjectiles()) {
+            if (proj != null && proj.isAlive()) {
+              proj.render(batch);
+            }
+          }
+        } else if (skill instanceof com.example.yugeup.game.skill.lightning.ChainLightning) {
+          com.example.yugeup.game.skill.lightning.ChainLightning chainLightning = (com.example.yugeup.game.skill.lightning.ChainLightning) skill;
+          for (com.example.yugeup.game.skill.lightning.ChainLightningProjectile proj : chainLightning.getActiveProjectiles()) {
+            if (proj != null && proj.isAlive()) {
+              proj.render(batch);
+            }
+          }
+        }
+
+        // 존 스킬 렌더링
+        else if (skill instanceof com.example.yugeup.game.skill.fire.FlameWave) {
+          com.example.yugeup.game.skill.fire.FlameWave flameWave = (com.example.yugeup.game.skill.fire.FlameWave) skill;
+          for (com.example.yugeup.game.skill.fire.FlameWaveZone zone : flameWave.getActiveZones()) {
+            if (zone != null && zone.isActive()) {
+              zone.render(batch);
+            }
+          }
+        } else if (skill instanceof com.example.yugeup.game.skill.fire.Inferno) {
+          com.example.yugeup.game.skill.fire.Inferno inferno = (com.example.yugeup.game.skill.fire.Inferno) skill;
+          for (com.example.yugeup.game.skill.fire.InfernoZone zone : inferno.getActiveZones()) {
+            if (zone != null && zone.isActive()) {
+              zone.render(batch);
+            }
+          }
+        } else if (skill instanceof com.example.yugeup.game.skill.water.Flood) {
+          com.example.yugeup.game.skill.water.Flood flood = (com.example.yugeup.game.skill.water.Flood) skill;
+          for (com.example.yugeup.game.skill.water.FloodZone zone : flood.getActiveZones()) {
+            if (zone != null && zone.isActive()) {
+              zone.render(batch);
+            }
+          }
+        } else if (skill instanceof com.example.yugeup.game.skill.wind.Tornado) {
+          com.example.yugeup.game.skill.wind.Tornado tornado = (com.example.yugeup.game.skill.wind.Tornado) skill;
+          for (com.example.yugeup.game.skill.wind.TornadoZone zone : tornado.getActiveZones()) {
+            if (zone != null && zone.isActive()) {
+              zone.render(batch);
+            }
+          }
+        } else if (skill instanceof com.example.yugeup.game.skill.wind.Storm) {
+          com.example.yugeup.game.skill.wind.Storm storm = (com.example.yugeup.game.skill.wind.Storm) skill;
+          for (com.example.yugeup.game.skill.wind.StormZone zone : storm.getActiveZones()) {
+            if (zone != null && zone.isActive()) {
+              zone.render(batch);
+            }
+          }
+        } else if (skill instanceof com.example.yugeup.game.skill.earth.EarthSpike) {
+          com.example.yugeup.game.skill.earth.EarthSpike earthSpike = (com.example.yugeup.game.skill.earth.EarthSpike) skill;
+          for (com.example.yugeup.game.skill.earth.EarthSpikeZone zone : earthSpike.getActiveZones()) {
+            if (zone != null && zone.isActive()) {
+              zone.render(batch);
+            }
+          }
+        } else if (skill instanceof com.example.yugeup.game.skill.lightning.ThunderStorm) {
+          com.example.yugeup.game.skill.lightning.ThunderStorm thunderStorm = (com.example.yugeup.game.skill.lightning.ThunderStorm) skill;
+          for (com.example.yugeup.game.skill.lightning.ThunderStormZone zone : thunderStorm.getActiveZones()) {
+            if (zone != null && zone.isActive()) {
+              zone.render(batch);
+            }
+          }
+        } else if (skill instanceof com.example.yugeup.game.skill.earth.StoneShield) {
+          com.example.yugeup.game.skill.earth.StoneShield stoneShield = (com.example.yugeup.game.skill.earth.StoneShield) skill;
+          for (com.example.yugeup.game.skill.earth.StoneShieldZone zone : stoneShield.getActiveZones()) {
+            if (zone != null && zone.isActive()) {
+              zone.render(batch);
+            }
+          }
+        }
+      }
+    }
+
+    // 원격 스킬 이펙트 렌더링
+    for (com.example.yugeup.game.effect.RemoteSkillEffect effect : remoteSkillEffects) {
+      effect.render(batch);
+    }
+
+    batch.end();
+  }
+
+  /**
+   * 조이스틱을 렌더링합니다.
+   */
+  private void renderJoystick() {
+    // 조이스틱 위치 업데이트 (플레이어 따라감, 카메라 줌 고려)
+    playerController.getJoystickController().updatePosition(myPlayer.getX(), myPlayer.getY(), camera);
+
+    // 조이스틱은 월드 좌표 사용
+    batch.setProjectionMatrix(camera.combined);
+    shapeRenderer.setProjectionMatrix(camera.combined);
+
+    // 그라데이션 투명도 효과를 위해 blend mode 활성화
+    Gdx.gl.glEnable(GL20.GL_BLEND);
+    Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+    playerController.getJoystickController().render(shapeRenderer);
+    Gdx.gl.glDisable(GL20.GL_BLEND);
+  }
+
+  /**
+   * UI를 렌더링합니다.
+   */
+  private void renderUI() {
+    // HUD 렌더링 (HP/MP/EXP 바) - PHASE_11
+    // HUD는 자체 카메라를 사용하여 화면에 고정됨
+    hudRenderer.render(batch, camera);
+
+    // 화면 고정 UI (남은 인원, 플레이어 닉네임) - HUD 카메라 사용
+    OrthographicCamera hudCam = new OrthographicCamera();
+    hudCam.setToOrtho(false, Constants.SCREEN_WIDTH, Constants.SCREEN_HEIGHT);
+    hudCam.update();
+
+    batch.setProjectionMatrix(hudCam.combined);
+    batch.begin();
+
+    // 우상단: 남은 인원
+    int alivePlayers = 1 + remotePlayers.size(); // 자신 + 원격 플레이어
+    font.setColor(Color.WHITE);
+    font.getData().setScale(1.0f);
+    String survivorText = "남은 인원: " + alivePlayers + "명";
+    font.draw(batch, survivorText, Constants.SCREEN_WIDTH - 250, Constants.SCREEN_HEIGHT - 40);
+
+    batch.end();
+
+    // 플레이어 닉네임 렌더링 (월드 좌표)
+    renderPlayerNames();
+  }
+
+  /**
+   * 플레이어 닉네임을 렌더링합니다.
+   */
+  private void renderPlayerNames() {
+    batch.setProjectionMatrix(camera.combined);
+    batch.begin();
+
+    // 로컬 플레이어 닉네임
+    font.setColor(Color.BLACK);  // 검은색으로 통일
+    font.getData().setScale(0.25f); // 크기 더 감소 (0.5 → 0.25)
+    String myName = "Player" + myPlayer.getPlayerId();
+
+    // 텍스트 중앙 정렬
+    com.badlogic.gdx.graphics.g2d.GlyphLayout layout = new com.badlogic.gdx.graphics.g2d.GlyphLayout(font, myName);
+    float textX = myPlayer.getX() - layout.width / 2;
+    float textY = myPlayer.getY() + 40; // 캐릭터 머리 위 (60 → 40, 더 가까이)
+    font.draw(batch, myName, textX, textY);
+
+    // 원격 플레이어 닉네임
+    font.setColor(Color.BLACK);  // 검은색으로 통일
+    for (Player remotePlayer : remotePlayers.values()) {
+      String remoteName = "Player" + remotePlayer.getPlayerId();
+      layout.setText(font, remoteName);
+      textX = remotePlayer.getX() - layout.width / 2;
+      textY = remotePlayer.getY() + 40;
+      font.draw(batch, remoteName, textX, textY);
+    }
+
+    batch.end();
+  }
+
+  @Override
+  public void resize(int width, int height) {
+    viewport.update(width, height, true);
+  }
+
+  @Override
+  public void pause() {
+  }
+
+  @Override
+  public void resume() {
+  }
+
+  @Override
+  public void hide() {
+  }
+
+  @Override
+  public void dispose() {
+    if (batch != null)
+      batch.dispose();
+    if (shapeRenderer != null)
+      shapeRenderer.dispose();
+    if (gameMap != null)
+      gameMap.dispose();
+    if (hudRenderer != null)
+      hudRenderer.dispose();
+    // UI 시스템 정리 (PHASE_19)
+    if (levelUpUpgradePanel != null)
+      levelUpUpgradePanel.dispose();
+    if (stage != null)
+      stage.dispose();
+    if (skin != null)
+      skin.dispose();
+  }
+}
