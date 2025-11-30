@@ -228,6 +228,7 @@ public class Main {
 
     public static class GameStartNotification {
         public long startTime;
+        public PlayerInfo[] players;  // 추가: 플레이어 이름 정보
 
         public GameStartNotification() {}
     }
@@ -460,6 +461,16 @@ public class Main {
 
                             GameStartNotification notification = new GameStartNotification();
                             notification.startTime = System.currentTimeMillis();
+
+                            // 플레이어 정보 포함
+                            notification.players = new PlayerInfo[room.players.size()];
+                            for (int i = 0; i < room.players.size(); i++) {
+                                PlayerInfo info = new PlayerInfo();
+                                info.playerId = room.players.get(i).id;
+                                info.playerName = room.players.get(i).name;  // 서버에 저장된 이름
+                                info.isHost = (room.players.get(i) == room.host);
+                                notification.players[i] = info;
+                            }
 
                             for (PlayerData p : room.players) {
                                 p.connection.sendTCP(notification);

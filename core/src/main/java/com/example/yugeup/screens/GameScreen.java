@@ -103,7 +103,10 @@ public class GameScreen implements Screen {
   private Skin skin;
   private LevelUpUpgradePanel levelUpUpgradePanel;
 
-  // 몬스터 스폰 비활성화 플래그
+    private Map<Integer, String> playerNames;  // playerId -> playerName
+
+
+    // 몬스터 스폰 비활성화 플래그
   private boolean monsterSpawnEnabled = true; // 몬스터 스폰 활성화
 
   // MonsterData 클래스 제거 - MonsterManager 사용
@@ -131,13 +134,20 @@ public class GameScreen implements Screen {
 
   @Override
   public void show() {
-    // 렌더링 초기화
+      // 렌더링 초기화
     batch = new SpriteBatch();
+    playerNames = new HashMap<>();
     shapeRenderer = new ShapeRenderer();
     viewport = new FitViewport(Constants.SCREEN_WIDTH, Constants.SCREEN_HEIGHT);
     camera = (OrthographicCamera) viewport.getCamera();
     camera.zoom = 0.05f; // 카메라 줌 인 (0.15 → 0.05, 극도로 확대하여 매우 좁은 시야)
 
+    // players 정보로 초기화
+    if (players != null) {
+        for (PlayerInfo playerInfo : players) {
+            playerNames.put(playerInfo.playerId, playerInfo.playerName);
+        }
+    }
     // 게임 맵 초기화 (PHASE_09)
     gameMap = new GameMap();
 
@@ -1089,11 +1099,11 @@ public class GameScreen implements Screen {
     batch.begin();
 
     // 로컬 플레이어 닉네임
-    font.setColor(Color.BLACK);  // 검은색으로 통일
-    font.getData().setScale(0.25f); // 크기 더 감소 (0.5 → 0.25)
-    String myName = "Player" + myPlayer.getPlayerId();
+    font.setColor(Color.BLACK);
+    font.getData().setScale(0.25f);
+    String myName = playerNames.getOrDefault(myPlayer.getPlayerId(), "Player" + myPlayer.getPlayerId());
 
-    // 텍스트 중앙 정렬
+      // 텍스트 중앙 정렬
     com.badlogic.gdx.graphics.g2d.GlyphLayout layout = new com.badlogic.gdx.graphics.g2d.GlyphLayout(font, myName);
     float textX = myPlayer.getX() - layout.width / 2;
     float textY = myPlayer.getY() + 40; // 캐릭터 머리 위 (60 → 40, 더 가까이)
@@ -1102,7 +1112,7 @@ public class GameScreen implements Screen {
     // 원격 플레이어 닉네임
     font.setColor(Color.BLACK);  // 검은색으로 통일
     for (Player remotePlayer : remotePlayers.values()) {
-      String remoteName = "Player" + remotePlayer.getPlayerId();
+      String remoteName = playerNames.getOrDefault(remotePlayer.getPlayerId(), "Player" + remotePlayer.getPlayerId());
       layout.setText(font, remoteName);
       textX = remotePlayer.getX() - layout.width / 2;
       textY = remotePlayer.getY() + 40;

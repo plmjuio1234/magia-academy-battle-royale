@@ -10,6 +10,7 @@ package com.example.yugeup.network.messages;
  */
 public class GameStartNotification {
     public long startTime;
+    public PlayerInfo[] players;  // 추가!
 
     public GameStartNotification() {}
 }

@@ -276,6 +276,21 @@ public class LobbyScreen implements Screen {
             // [방 만들기] 버튼
             else if (roomListPanel.isCreateButtonClicked(touchX, touchY)) {
                 System.out.println("[LobbyScreen] 방 만들기 버튼 클릭");
+
+                // 이름이 설정되어 있으면 먼저 서버에 전송
+                if (!currentPlayerName.isEmpty()) {
+                    NetworkManager.SetPlayerNameMsg nameMsg = new NetworkManager.SetPlayerNameMsg();
+                    nameMsg.playerName = currentPlayerName;
+                    networkManager.sendTCP(nameMsg);
+
+                    // 서버 처리 대기
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+
                 createRoomDialog.show();
             }
 

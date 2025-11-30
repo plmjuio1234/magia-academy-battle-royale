@@ -86,6 +86,7 @@ public class Main {
 
     public static class GameStartNotification {
         public long startTime;
+        public PlayerInfo[] players;  // 이 줄이 있나요?
 
         public GameStartNotification() {}
     }
