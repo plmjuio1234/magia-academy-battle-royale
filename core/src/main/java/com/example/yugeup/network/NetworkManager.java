@@ -28,6 +28,15 @@ import java.io.IOException;
  */
 public class NetworkManager {
 
+    public static class SetPlayerNameMsg {
+        public String playerName;
+    }
+
+    public static class SetPlayerNameResponse {
+        public boolean success;
+        public String message;
+    }
+
     // 싱글톤 인스턴스
     private static NetworkManager instance;
 
@@ -157,6 +166,8 @@ public class NetworkManager {
         kryo.register(PlayerAttackMonsterMsg.class);             // ID: 30
         kryo.register(MonsterDamageMsg.class);                   // ID: 31
         kryo.register(ProjectileFiredMsg.class);                 // ID: 32
+        kryo.register(SetPlayerNameMsg.class);                   // ID: 33
+        kryo.register(SetPlayerNameResponse.class);              // ID: 34
 
         System.out.println("[NetworkManager] Kryo 메시지 등록 완료 (서버와 동일한 순서)");
     }

@@ -16,6 +16,8 @@ import com.example.yugeup.network.MessageHandler;
 import com.example.yugeup.network.NetworkManager;
 import com.example.yugeup.network.RoomManager;
 import org.example.Main.*;
+
+import com.example.yugeup.ui.dialog.NameInputDialog;
 import com.example.yugeup.ui.lobby.CharacterPreview;
 import com.example.yugeup.ui.lobby.RoomListPanel;
 import com.example.yugeup.ui.dialog.CreateRoomDialog;
@@ -69,6 +71,9 @@ public class LobbyScreen implements Screen {
     // 마우스 좌표 변환용
     private Vector3 worldCoords;
 
+    private NameInputDialog nameInputDialog;
+    private String currentPlayerName = "";  // 현재 플레이어 이름 저장
+
     /**
      * LobbyScreen 생성자
      *
@@ -99,6 +104,7 @@ public class LobbyScreen implements Screen {
 
     @Override
     public void show() {
+
         // 에셋 매니저에서 리소스 가져오기
         com.example.yugeup.utils.AssetManager assetManager = com.example.yugeup.utils.AssetManager.getInstance();
 
@@ -124,6 +130,9 @@ public class LobbyScreen implements Screen {
             com.example.yugeup.utils.UIDebugger.getLobbyCharPreviewHeight(),
             font
         );
+
+        // 이름 입력 다이얼로그 초기화
+        nameInputDialog = new NameInputDialog(font, assetManager.getFont("font_title"));
 
         // 방 생성 다이얼로그 초기화
         createRoomDialog = new CreateRoomDialog(font, assetManager.getFont("font_title"));
@@ -191,6 +200,12 @@ public class LobbyScreen implements Screen {
             createRoomDialog.render(batch, shapeRenderer);
         }
 
+        // 이름 입력 다이얼로그 렌더링 (UI 위에 표시)
+        if (nameInputDialog.isVisible()) {
+            shapeRenderer.setProjectionMatrix(camera.combined);
+            nameInputDialog.render(batch, shapeRenderer);
+        }
+
         // UI 디버거 렌더링 (F1 키로 활성화)
         UIDebugger.render(batch, font);
 
@@ -213,6 +228,20 @@ public class LobbyScreen implements Screen {
      * 입력을 처리합니다.
      */
     private void handleInput() {
+        // 이름 입력 다이얼로그가 표시 중이면 다이얼로그 입력만 처리
+        if (nameInputDialog.isVisible()) {
+            if (Gdx.input.justTouched()) {
+                worldCoords.set(Gdx.input.getX(), Gdx.input.getY(), 0);
+                camera.unproject(worldCoords, viewport.getScreenX(), viewport.getScreenY(),
+                    viewport.getScreenWidth(), viewport.getScreenHeight());
+
+                nameInputDialog.handleInput(worldCoords.x, worldCoords.y);
+            } else {
+                nameInputDialog.handleInput(0, 0);
+            }
+            return;
+        }
+
         // 다이얼로그가 표시 중이면 다이얼로그 입력만 처리
         if (createRoomDialog.isVisible()) {
             if (Gdx.input.justTouched()) {
@@ -267,7 +296,19 @@ public class LobbyScreen implements Screen {
 
             // [외형변경] 버튼
             if (characterPreview.isCustomizeButtonClicked(touchX, touchY)) {
-                System.out.println("[LobbyScreen] 외형변경 버튼 클릭 (PHASE_06에서 구현 예정)");
+                System.out.println("[LobbyScreen] 외형변경 버튼 클릭 - 현재 닉네임 설정 역할 진행중... 이름 설정 다이얼로그 표시");
+                nameInputDialog.show(currentPlayerName, new NameInputDialog.NameInputCallback() {
+                    @Override
+                    public void onNameSet(String name) {
+                        currentPlayerName = name;
+                        characterPreview.setNickname(name);
+                        System.out.println("[LobbyScreen] 플레이어 이름 설정: " + name);
+                        // 서버에 이름 전송
+                        NetworkManager.SetPlayerNameMsg msg = new NetworkManager.SetPlayerNameMsg();
+                        msg.playerName = name;
+                        networkManager.sendTCP(msg);
+                    }
+                });
             }
         }
     }
@@ -355,6 +396,9 @@ public class LobbyScreen implements Screen {
         }
         if (characterPreview != null) {
             characterPreview.dispose();
+        }
+        if (nameInputDialog != null) {
+            // NameInputDialog는 dispose 메서드 없음 (폰트는 AssetManager에서 관리)
         }
         System.out.println("[LobbyScreen] 리소스 해제 완료");
     }

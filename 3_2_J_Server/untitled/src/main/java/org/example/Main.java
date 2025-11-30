@@ -135,6 +135,21 @@ public class Main {
         }
     }
 
+    // 플레이어 이름 설정 메시지 (클라이언트 → 서버)
+    public static class SetPlayerNameMsg {
+        public String playerName;
+
+        public SetPlayerNameMsg() {}
+    }
+
+    // 이름 설정 응답 (서버 → 클라이언트)
+    public static class SetPlayerNameResponse {
+        public boolean success;
+        public String message;
+
+        public SetPlayerNameResponse() {}
+    }
+
     public static class CreateRoomMsg {
         public String roomName;
         public int maxPlayers;
@@ -291,6 +306,8 @@ public class Main {
             kryo.register(PlayerAttackMonsterMsg.class);             // ID: 30
             kryo.register(MonsterDamageMsg.class);                   // ID: 31
             kryo.register(ProjectileFiredMsg.class);                 // ID: 32
+            kryo.register(SetPlayerNameMsg.class);                   // ID: 33
+            kryo.register(SetPlayerNameResponse.class);              // ID: 34
 
             server.addListener(new Listener() {
                 @Override
@@ -561,6 +578,32 @@ public class Main {
 
                         Messages echo = new Messages("에코: " + msg.text);
                         connection.sendTCP(echo);
+                    }
+
+                    else if (object instanceof SetPlayerNameMsg) {
+                        SetPlayerNameMsg msg = (SetPlayerNameMsg) object;
+
+                        SetPlayerNameResponse response = new SetPlayerNameResponse();
+
+                        // 이름 유효성 검사
+                        if (msg.playerName == null || msg.playerName.trim().isEmpty()) {
+                            response.success = false;
+                            response.message = "이름을 입력해주세요";
+                        } else if (msg.playerName.length() > 12) {
+                            response.success = false;
+                            response.message = "이름은 12자 이내로 입력해주세요";
+                        } else if (player.currentRoom != null) {
+                            response.success = false;
+                            response.message = "방에 있을 때는 이름을 변경할 수 없습니다";
+                        } else {
+                            // 이름 설정 성공
+                            player.name = msg.playerName.trim();
+                            response.success = true;
+                            response.message = "이름이 설정되었습니다";
+                            System.out.println("[이름 설정] ID=" + player.id + " → " + player.name);
+                        }
+
+                        connection.sendTCP(response);
                     }
                 }
             });

@@ -8,6 +8,7 @@ import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.graphics.GL20;
+import com.example.yugeup.network.NetworkManager;
 import com.example.yugeup.network.RoomManager;
 import com.example.yugeup.utils.Constants;
 
@@ -29,18 +30,23 @@ public class CreateRoomDialog {
     private static final float DIALOG_X = (Constants.SCREEN_WIDTH - DIALOG_WIDTH) / 2f;
     private static final float DIALOG_Y = (Constants.SCREEN_HEIGHT - DIALOG_HEIGHT) / 2f;
 
+    // 플레이어 이름 입력 필드 (맨 위에 추가)
+    private static final float PLAYER_NAME_INPUT_Y = DIALOG_Y + DIALOG_HEIGHT - 200f;
+
+    private String playerName = "";  // 추가
+
     // 입력 필드 영역
     private static final float INPUT_FIELD_HEIGHT = 80f;
     private static final float INPUT_FIELD_MARGIN = 50f;
 
     // 방 제목 입력 필드
     private static final float NAME_INPUT_X = DIALOG_X + INPUT_FIELD_MARGIN;
-    private static final float NAME_INPUT_Y = DIALOG_Y + DIALOG_HEIGHT - 200f;
+    private static final float NAME_INPUT_Y = DIALOG_Y + DIALOG_HEIGHT - 320f;
     private static final float NAME_INPUT_WIDTH = DIALOG_WIDTH - (INPUT_FIELD_MARGIN * 2);
 
     // 최대 인원 입력 필드
     private static final float PLAYER_INPUT_X = DIALOG_X + INPUT_FIELD_MARGIN;
-    private static final float PLAYER_INPUT_Y = DIALOG_Y + DIALOG_HEIGHT - 320f;
+    private static final float PLAYER_INPUT_Y = DIALOG_Y + DIALOG_HEIGHT - 440f;
     private static final float PLAYER_INPUT_WIDTH = DIALOG_WIDTH - (INPUT_FIELD_MARGIN * 2);
 
     // 버튼 크기
@@ -61,7 +67,7 @@ public class CreateRoomDialog {
     private BitmapFont titleFont;
     private GlyphLayout glyphLayout;
 
-    // 현재 입력 모드 (0: 방 제목, 1: 최대 인원)
+    // 현재 입력 모드 (0: 플레이어 이름, 1: 방 제목, 2: 최대 인원)
     private int inputMode = 0;
 
     // 모바일 키보드 입력 리스너
@@ -176,6 +182,30 @@ public class CreateRoomDialog {
      * 입력 필드를 렌더링합니다.
      */
     private void renderInputFields(SpriteBatch batch, ShapeRenderer shapeRenderer) {
+        // ===== 플레이어 이름 입력 필드 (NEW) =====
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        Color playerNameFieldColor = inputMode == 0 ? new Color(0.8f, 0.9f, 1.0f, 1.0f) : Color.WHITE;
+        shapeRenderer.setColor(playerNameFieldColor);
+        shapeRenderer.rect(NAME_INPUT_X, PLAYER_NAME_INPUT_Y, NAME_INPUT_WIDTH, INPUT_FIELD_HEIGHT);
+        shapeRenderer.end();
+
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+        shapeRenderer.setColor(inputMode == 0 ? Color.BLUE : Color.GRAY);
+        Gdx.gl.glLineWidth(2f);
+        shapeRenderer.rect(NAME_INPUT_X, PLAYER_NAME_INPUT_Y, NAME_INPUT_WIDTH, INPUT_FIELD_HEIGHT);
+        shapeRenderer.end();
+        Gdx.gl.glLineWidth(1f);
+
+        batch.begin();
+        font.setColor(Color.BLACK);
+        font.draw(batch, "내 이름:", NAME_INPUT_X + 20f, PLAYER_NAME_INPUT_Y + INPUT_FIELD_HEIGHT + 30f);
+
+        String displayPlayerName = playerName.isEmpty() ? "[클릭하여 입력]" : playerName;
+        Color playerNameColor = playerName.isEmpty() ? Color.GRAY : Color.BLACK;
+        font.setColor(playerNameColor);
+        font.draw(batch, displayPlayerName, NAME_INPUT_X + 30f, PLAYER_NAME_INPUT_Y + INPUT_FIELD_HEIGHT / 2f + 10f);
+        batch.end();
+
         // 방 제목 입력 필드
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
         Color nameFieldColor = inputMode == 0 ? new Color(0.8f, 0.9f, 1.0f, 1.0f) : Color.WHITE;
@@ -269,6 +299,24 @@ public class CreateRoomDialog {
             System.out.println("[CreateRoomDialog] 클릭 좌표: (" + touchX + ", " + touchY + ")");
             System.out.println("[CreateRoomDialog] NAME_INPUT 영역: (" + NAME_INPUT_X + ", " + NAME_INPUT_Y + ", " + NAME_INPUT_WIDTH + ", " + INPUT_FIELD_HEIGHT + ")");
             System.out.println("[CreateRoomDialog] OK_BUTTON 영역: (" + OK_BUTTON_X + ", " + BUTTON_Y + ", " + BUTTON_WIDTH + ", " + BUTTON_HEIGHT + ")");
+
+            // 플레이어 이름 필드 클릭
+            if (isPointInRect(touchX, touchY, NAME_INPUT_X, PLAYER_NAME_INPUT_Y, NAME_INPUT_WIDTH, INPUT_FIELD_HEIGHT)) {
+                inputMode = 0;
+                System.out.println("[CreateRoomDialog] 플레이어 이름 입력 필드 클릭");
+                Gdx.input.getTextInput(new Input.TextInputListener() {
+                    @Override
+                    public void input(String text) {
+                        if (text != null && !text.isEmpty()) {
+                            playerName = text;
+                            inputMode = 1;  // 방 제목으로 이동
+                        }
+                    }
+                    @Override
+                    public void canceled() {}
+                }, "플레이어 이름 입력", playerName, "이름을 입력하세요");
+                return true;
+            }
 
             // 방 제목 입력 필드 클릭
             if (isPointInRect(touchX, touchY, NAME_INPUT_X, NAME_INPUT_Y, NAME_INPUT_WIDTH, INPUT_FIELD_HEIGHT)) {
