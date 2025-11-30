@@ -29,7 +29,7 @@ public class Constants {
     // ==================== 서버 설정 ====================
 
     /** 서버 호스트 주소 */
-    public static final String SERVER_HOST = "localhost";
+    public static final String SERVER_HOST = "10.0.2.2";
 
     /** 서버 TCP 포트 */
     public static final int SERVER_PORT = 5000;
