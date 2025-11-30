@@ -258,7 +258,7 @@ public class CreateRoomDialog {
      *
      * @return true면 다이얼로그가 입력을 소비함
      */
-    public boolean handleInput() {
+    public boolean handleInput(float touchX, float touchY) {
         if (!isVisible) return false;
 
         // 키보드 입력 처리 (PC용)
@@ -266,10 +266,6 @@ public class CreateRoomDialog {
 
         // 터치/마우스 클릭 처리
         if (Gdx.input.justTouched()) {
-            // 화면 좌표를 LibGDX 좌표계로 변환 (Y축 반전)
-            float touchX = Gdx.input.getX();
-            float touchY = Constants.SCREEN_HEIGHT - Gdx.input.getY();
-
             System.out.println("[CreateRoomDialog] 클릭 좌표: (" + touchX + ", " + touchY + ")");
             System.out.println("[CreateRoomDialog] NAME_INPUT 영역: (" + NAME_INPUT_X + ", " + NAME_INPUT_Y + ", " + NAME_INPUT_WIDTH + ", " + INPUT_FIELD_HEIGHT + ")");
             System.out.println("[CreateRoomDialog] OK_BUTTON 영역: (" + OK_BUTTON_X + ", " + BUTTON_Y + ", " + BUTTON_WIDTH + ", " + BUTTON_HEIGHT + ")");
@@ -278,7 +274,6 @@ public class CreateRoomDialog {
             if (isPointInRect(touchX, touchY, NAME_INPUT_X, NAME_INPUT_Y, NAME_INPUT_WIDTH, INPUT_FIELD_HEIGHT)) {
                 inputMode = 0;
                 System.out.println("[CreateRoomDialog] 방 제목 입력 필드 클릭");
-                // 모바일 키보드 띄우기 (PC에서는 무시됨)
                 Gdx.input.getTextInput(textInputListener, "방 제목 입력", roomName, "방 제목을 입력하세요");
                 return true;
             }
@@ -310,7 +305,7 @@ public class CreateRoomDialog {
             }
         }
 
-        return true;  // 다이얼로그가 표시 중이면 항상 입력 소비
+        return true;
     }
 
     /**

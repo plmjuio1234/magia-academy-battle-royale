@@ -215,7 +215,17 @@ public class LobbyScreen implements Screen {
     private void handleInput() {
         // 다이얼로그가 표시 중이면 다이얼로그 입력만 처리
         if (createRoomDialog.isVisible()) {
-            createRoomDialog.handleInput();
+            if (Gdx.input.justTouched()) {
+                // 화면 좌표를 월드 좌표로 변환
+                worldCoords.set(Gdx.input.getX(), Gdx.input.getY(), 0);
+                camera.unproject(worldCoords, viewport.getScreenX(), viewport.getScreenY(),
+                    viewport.getScreenWidth(), viewport.getScreenHeight());
+
+                createRoomDialog.handleInput(worldCoords.x, worldCoords.y);
+            } else {
+                // 키보드 입력만 처리 (터치 없을 때)
+                createRoomDialog.handleInput(0, 0);
+            }
             return;
         }
 
@@ -223,7 +233,7 @@ public class LobbyScreen implements Screen {
             // 화면 좌표를 월드 좌표로 변환
             worldCoords.set(Gdx.input.getX(), Gdx.input.getY(), 0);
             camera.unproject(worldCoords, viewport.getScreenX(), viewport.getScreenY(),
-                           viewport.getScreenWidth(), viewport.getScreenHeight());
+                viewport.getScreenWidth(), viewport.getScreenHeight());
 
             float touchX = worldCoords.x;
             float touchY = worldCoords.y;
