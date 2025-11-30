@@ -15,6 +15,9 @@ public class ServerMonsterManager {
     private static final float MAP_HEIGHT = 4000f;  // 전체 맵 높이
     private int nextMonsterId = 1;
 
+    // NEW : 충돌 맵 추가
+    private CollisionMap collisionMap;
+
     // 콜백: 메시지를 방의 모든 플레이어에게 전송
     public interface MessageCallback {
         void broadcast(int roomId, Object message);
@@ -22,8 +25,26 @@ public class ServerMonsterManager {
 
     private MessageCallback messageCallback;
 
-    public ServerMonsterManager(MessageCallback callback) {
+    // NEW : 생성자에 CollisionMap 매개변수 추가
+    public ServerMonsterManager(MessageCallback callback, CollisionMap collisionMap) {
         this.messageCallback = callback;
+        this.collisionMap = collisionMap;
+    }
+
+    // NEW : 클라이언트 GameMap.isWall()과 동일한 로직
+    public boolean isWall(float x, float y) {
+        if (collisionMap == null) {
+            return false;
+        }
+        return collisionMap.isWall(x, y);
+    }
+
+    // NEW : 클라이언트 GameMap.isWallInArea()와 동일한 로직
+    public boolean isWallInArea(float centerX, float centerY, float radius) {
+        if (collisionMap == null) {
+            return false;
+        }
+        return collisionMap.isWallInArea(centerX, centerY, radius);
     }
 
     /**
@@ -81,11 +102,11 @@ public class ServerMonsterManager {
 
         roomSpawnTimers.put(roomId, spawnTimer);
 
-        // 모든 몬스터 업데이트 (플레이어 위치 전달)
+        // NEW : 모든 몬스터 업데이트 (플레이어 위치 + 충돌 맵 전달)
         Iterator<ServerMonster> iterator = monsters.iterator();
         while (iterator.hasNext()) {
             ServerMonster monster = iterator.next();
-            monster.update(delta, activePlayers, playerPositions);
+            monster.update(delta, activePlayers, playerPositions, this);  // NEW : this(ServerMonsterManager) 전달
 
             // 위치 동기화 (100ms마다)
             if (monster.shouldSyncPosition()) {
@@ -108,16 +129,32 @@ public class ServerMonsterManager {
     private void spawnMonster(int roomId, List<Integer> activePlayers) {
         if (activePlayers.isEmpty()) return;
 
-        // 전체 맵 범위에서 랜덤 스폰 (4000x4000)
-        float x = (float)(Math.random() * MAP_WIDTH);
-        float y = (float)(Math.random() * MAP_HEIGHT);
+        // NEW : 벽이 아닌 위치를 찾을 때까지 반복 (최대 20번 시도)
+        float x = 0, y = 0;
+        boolean validPosition = false;
+        int attempts = 0;
 
-        // 중앙에서 멀리 떨어진 곳만 스폰 (시작 위치 보호)
-        float centerX = MAP_WIDTH / 2f;
-        float centerY = MAP_HEIGHT / 2f;
-        float distance = (float)Math.sqrt((x - centerX) * (x - centerX) + (y - centerY) * (y - centerY));
-        if (distance < 400f) {
-            spawnMonster(roomId, activePlayers);  // 재귀적으로 다시 스폰
+        while (!validPosition && attempts < 20) {
+            // 전체 맵 범위에서 랜덤 스폰 (4000x4000)
+            x = (float)(Math.random() * MAP_WIDTH);
+            y = (float)(Math.random() * MAP_HEIGHT);
+
+            // 중앙에서 멀리 떨어진 곳만 스폰 (시작 위치 보호)
+            float centerX = MAP_WIDTH / 2f;
+            float centerY = MAP_HEIGHT / 2f;
+            float distance = (float)Math.sqrt((x - centerX) * (x - centerX) + (y - centerY) * (y - centerY));
+
+            // NEW : 중앙 보호 + 벽이 아닌 곳인지 체크
+            if (distance >= 400f && !isWallInArea(x, y, 12f)) {
+                validPosition = true;
+            }
+
+            attempts++;
+        }
+
+        // NEW : 유효한 위치를 못 찾으면 스폰 포기
+        if (!validPosition) {
+            System.err.println("[몬스터 스폰] 룸 " + roomId + ": 유효한 스폰 위치를 찾지 못함 (20번 시도 실패)");
             return;
         }
 
@@ -227,8 +264,6 @@ public class ServerMonsterManager {
             }
         }
     }
-
-    // 메시지 클래스는 별도 파일로 분리됨 (org.example 패키지)
 
     /**
      * 룸의 활성 몬스터 개수 반환

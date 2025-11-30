@@ -44,16 +44,30 @@ public abstract class ServerMonster {
 
     /**
      * 매 프레임 업데이트
+     * NEW : ServerMonsterManager 매개변수 추가 (벽 충돌 체크용)
      */
-    public void update(float delta, List<Integer> activePlayers, Map<Integer, float[]> playerPositions) {
+    public void update(float delta, List<Integer> activePlayers, Map<Integer, float[]> playerPositions, ServerMonsterManager monsterManager) {
         if (!alive) return;
 
         // AI 로직 실행 (플레이어 위치 기반 추적)
         updateAI(delta, activePlayers, playerPositions);
 
+        // NEW : 이동 전 위치 저장
+        float oldX = x;
+        float oldY = y;
+
         // 위치 업데이트
         x += vx * delta;
         y += vy * delta;
+
+        // NEW : 벽 충돌 체크 (클라이언트와 동일한 로직)
+        if (monsterManager != null && monsterManager.isWallInArea(x, y, 12f)) {
+            // 벽에 부딪히면 원위치
+            x = oldX;
+            y = oldY;
+            vx = 0;
+            vy = 0;
+        }
 
         // 맵 경계 제한
         clampToMapBounds();

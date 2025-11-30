@@ -32,6 +32,8 @@ public class Main {
         ServerMonsterManager monsterManager;
         Map<Integer, PlayerPosition> playerPositions = new HashMap<>();
 
+        private CollisionMap collisionMap;
+
         static class PlayerPosition {
             float x, y;
             PlayerPosition(float x, float y) {
@@ -40,20 +42,23 @@ public class Main {
             }
         }
 
-        GameRoom(int id, String name, int max, PlayerData host) {
+        GameRoom(int id, String name, int max, PlayerData host, CollisionMap collisionMap) {
             this.roomId = id;
             this.roomName = name;
             this.maxPlayers = max;
             this.host = host;
+            this.collisionMap = collisionMap;
             players.add(host);
 
             // MonsterManager 초기화
-            this.monsterManager = new ServerMonsterManager((roomId, message) -> {
-                // 방의 모든 플레이어에게 메시지 브로드캐스트
-                for (PlayerData player : players) {
-                    player.connection.sendTCP(message);
-                }
-            });
+            this.monsterManager = new ServerMonsterManager(
+                (roomId, message) -> {
+                    for (PlayerData player : players) {
+                        player.connection.sendTCP(message);
+                    }
+                },
+                collisionMap  //  MonsterManager에도 전달
+            );
             this.monsterManager.initializeRoom(roomId);
         }
 
@@ -246,6 +251,17 @@ public class Main {
         try {
             Server server = new Server(16384, 8192);
 
+            CollisionMap collisionMap = TMXCollisionParser.parse(
+                "resources/maps/magical-school-map.tmx"
+            );
+
+            if (collisionMap == null) {
+                System.err.println("[서버] 충돌 맵 로드 실패 - 서버 종료");
+                return;
+            }
+
+            System.out.println("[서버] 충돌 맵 로드 완료 - 몬스터 이동에 사용");
+
             Kryo kryo = server.getKryo();
 
             // ReflectASM 비활성화 (Java 모듈 문제 회피)
@@ -309,7 +325,6 @@ public class Main {
                     if (object instanceof CreateRoomMsg) {
                         CreateRoomMsg msg = (CreateRoomMsg) object;
 
-                        // 이미 방에 있으면 방 생성 불가
                         if (player.currentRoom != null) {
                             CreateRoomResponse response = new CreateRoomResponse();
                             response.success = false;
@@ -319,10 +334,16 @@ public class Main {
                             return;
                         }
 
-                        GameRoom room = new GameRoom(nextRoomId++, msg.roomName,
-                            msg.maxPlayers, player);
+                        // ⭐ 방 생성 시 충돌 맵 전달
+                        GameRoom room = new GameRoom(
+                            nextRoomId++,
+                            msg.roomName,
+                            msg.maxPlayers,
+                            player,
+                            collisionMap  // 몬스터 이동 시 벽 충돌 체크용
+                        );
                         rooms.put(room.roomId, room);
-                        player.currentRoom = room;  // 현재 방 설정!
+                        player.currentRoom = room;
 
                         CreateRoomResponse response = new CreateRoomResponse();
                         response.success = true;
@@ -330,7 +351,6 @@ public class Main {
                         response.message = "방 생성 성공";
                         response.roomInfo = room.toRoomInfo();
 
-                        // 플레이어 목록 (방장 본인만)
                         response.players = new PlayerInfo[1];
                         PlayerInfo hostInfo = new PlayerInfo();
                         hostInfo.playerId = player.id;
