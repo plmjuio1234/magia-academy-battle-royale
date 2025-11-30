@@ -29,8 +29,9 @@ public class Constants {
     // ==================== 서버 설정 ====================
 
     /** 서버 호스트 주소 */
-    public static final String SERVER_HOST = "10.0.2.2";
-
+    public static final String SERVER_HOST = "10.0.2.2"; //TODO: 서버 아이피 수정 <- 현재는 에뮬 전용 로컬호스트인 10.0.2.2로 하고 있음
+    //public static final String SERVER_HOST = "127.0.0.1";
+    
     /** 서버 TCP 포트 */
     public static final int SERVER_PORT = 5000;
 
