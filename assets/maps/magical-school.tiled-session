@@ -66,16 +66,19 @@
             "scaleInDock": 1,
             "scaleInEditor": 8
         },
+        "fog.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
         "magical-school-map.tmx": {
             "expandedGroupLayers": [
-                14,
-                13
+                23
             ],
-            "scale": 0.125,
-            "selectedLayer": 0,
+            "scale": 0.25,
+            "selectedLayer": 12,
             "viewCenter": {
-                "x": 1524,
-                "y": 1876
+                "x": 2534,
+                "y": 1590
             }
         },
         "open-door-wall.tsx": {
@@ -144,14 +147,15 @@
         "TopDownHouse_FurnitureState1.tsx",
         "TX Tileset Grass.tsx",
         "magical-school-map.tmx",
-        "TX Tileset Grass.tsx",
-        "TX Plant.tsx"
+        "TX Plant.tsx",
+        "fog.tsx"
     ],
     "project": "magical-school.tiled-project",
     "recentFiles": [
         "door-frame1.tsx",
         "TopDownHouse_FurnitureState1.tsx",
         "TX Tileset Grass.tsx",
+        "fog.tsx",
         "TX Plant.tsx",
         "magical-school-map.tmx",
         "wall-frame.tsx",
@@ -159,8 +163,7 @@
         "statue.tsx",
         "TopDownHouse_FloorsAndWalls.tsx",
         "wall.tsx",
-        "TopDownHouse_FurnitureState2.tsx",
-        "TopDownHouse_SmallItems.tsx"
+        "TopDownHouse_FurnitureState2.tsx"
     ],
     "tileset.lastUsedFormat": "tsx",
     "tileset.tileSize": {
