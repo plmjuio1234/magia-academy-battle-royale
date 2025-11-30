@@ -47,10 +47,36 @@ public class CollisionMap {
      * 클라이언트 GameMap.isWallInArea()와 동일한 로직
      */
     public boolean isWallInArea(float centerX, float centerY, float radius) {
-        return isWall(centerX - radius, centerY) ||
-            isWall(centerX + radius, centerY) ||
-            isWall(centerX, centerY - radius) ||
-            isWall(centerX, centerY + radius);
+        // 체크할 타일 범위 계산
+        int minTileX = (int)((centerX - radius) / tileWidth);
+        int maxTileX = (int)((centerX + radius) / tileWidth);
+        int minTileY = (int)((centerY - radius) / tileHeight);
+        int maxTileY = (int)((centerY + radius) / tileHeight);
+
+        // 범위 내 모든 타일 체크
+        for (int ty = minTileY; ty <= maxTileY; ty++) {
+            for (int tx = minTileX; tx <= maxTileX; tx++) {
+                if (tx < 0 || tx >= width || ty < 0 || ty >= height) {
+                    continue;
+                }
+
+                // 타일 중심 좌표
+                float tileCenterX = (tx + 0.5f) * tileWidth;
+                float tileCenterY = (ty + 0.5f) * tileHeight;
+
+                // 원과 타일의 거리 체크
+                float dx = centerX - tileCenterX;
+                float dy = centerY - tileCenterY;
+                float distance = (float)Math.sqrt(dx * dx + dy * dy);
+
+                // 몬스터 반지름 내에 벽 타일이 있으면 true
+                if (distance < radius && !walkable[ty][tx]) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     public int getWidth() { return width; }
