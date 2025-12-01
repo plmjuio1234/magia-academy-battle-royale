@@ -171,7 +171,7 @@ public class PlayerController implements InputProcessor {
                             isSelectingSkillDirection = true;
                             pendingSkill = skill;
                             if (hudRenderer.getDirectionIndicator() != null) {
-                                hudRenderer.getDirectionIndicator().activate(player.getX(), player.getY());
+                                hudRenderer.getDirectionIndicator().activate(player);
                             }
                             System.out.println("[PlayerController] 방향 선택 모드 시작: " + skill.getName());
                         } else if (needsRangeConfirm(skill)) {
@@ -180,7 +180,7 @@ public class PlayerController implements InputProcessor {
                             pendingSkill = skill;
                             if (hudRenderer.getDirectionIndicator() != null) {
                                 float range = getSkillRange(skill);
-                                hudRenderer.getDirectionIndicator().activateRangeMode(player.getX(), player.getY(), range);
+                                hudRenderer.getDirectionIndicator().activateRangeMode(player, range);
                             }
                             System.out.println("[PlayerController] 범위 확인 모드 시작: " + skill.getName());
                         } else {

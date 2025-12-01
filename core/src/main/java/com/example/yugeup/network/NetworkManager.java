@@ -307,6 +307,19 @@ public class NetworkManager {
   }
 
   /**
+   * 스킬 시전 메시지를 서버에 전송합니다 (전체 동기화 버전).
+   * 모든 스킬 타입에 대해 정확한 동기화를 지원합니다.
+   *
+   * @param msg 스킬 시전 메시지 (모든 필드가 설정된 상태)
+   */
+  public void sendSkillCastFull(SkillCastMsg msg) {
+    if (!connected || client == null) {
+      return;
+    }
+    sendTCP(msg);
+  }
+
+  /**
    * PVP 공격 메시지를 서버로 전송합니다.
    *
    * @param targetPlayerId 타겟 플레이어 ID

@@ -13,7 +13,7 @@ public class ServerMonsterManager {
     private static final int MAX_MONSTERS_PER_ROOM = 50;  // 최대 50마리 유지
     private static final float MAP_WIDTH = 4000f;  // 전체 맵 너비
     private static final float MAP_HEIGHT = 4000f;  // 전체 맵 높이
-    private int nextMonsterId = 1;
+    private int nextMonsterId = 1000;  // 몬스터 ID는 1000부터 시작 (플레이어 ID와 구분)
 
     // NEW : 충돌 맵 추가
     private CollisionMap collisionMap;
@@ -309,6 +309,9 @@ public class ServerMonsterManager {
         msg.dropY = monster.y;
         msg.killerId = monster.getLastAttackerId();  // 막타친 플레이어 ID
 
+        System.out.println("[몬스터 사망] 룸 " + roomId + ": 몬스터 ID=" + monster.id +
+            ", 타입=" + monster.getType() + ", killerId=" + msg.killerId + " (lastAttackerId=" + monster.getLastAttackerId() + ")");
+
         messageCallback.broadcast(roomId, msg);
     }
 
@@ -338,7 +341,8 @@ public class ServerMonsterManager {
                 messageCallback.broadcast(roomId, damageMsg);
 
                 System.out.println("[ServerMonsterManager] 몬스터 피격: ID=" + monster.id +
-                    ", 데미지=" + damage + ", 남은 HP=" + monster.hp + "/" + monster.maxHp);
+                    ", 데미지=" + damage + ", 공격자 ID=" + attackerId +
+                    ", 남은 HP=" + monster.hp + "/" + monster.maxHp + ", lastAttackerId=" + monster.getLastAttackerId());
                 break;
             }
         }

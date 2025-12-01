@@ -17,6 +17,9 @@ public class SkillDirectionIndicator {
     private Vector2 targetPosition;
     private boolean isActive;
 
+    // 플레이어 참조 (위치 자동 추적용)
+    private com.example.yugeup.game.player.Player playerRef;
+
     // 화살표 길이 및 스타일
     private static final float ARROW_LENGTH = 100f;  // 화살표 길이
     private static final float ARROW_HEAD_SIZE = 20f;  // 화살표 머리 크기
@@ -40,12 +43,12 @@ public class SkillDirectionIndicator {
     /**
      * 방향 표시기 활성화
      *
-     * @param playerX 플레이어 X 좌표
-     * @param playerY 플레이어 Y 좌표
+     * @param player 플레이어 (위치 추적용)
      */
-    public void activate(float playerX, float playerY) {
-        this.playerPosition.set(playerX, playerY);
-        this.targetPosition.set(playerX, playerY);
+    public void activate(com.example.yugeup.game.player.Player player) {
+        this.playerRef = player;
+        this.playerPosition.set(player.getX(), player.getY());
+        this.targetPosition.set(player.getX(), player.getY());
         this.isActive = true;
         this.isRangeMode = false;
         this.rangeRadius = 0f;
@@ -54,13 +57,13 @@ public class SkillDirectionIndicator {
     /**
      * 범위 표시 모드로 활성화 (광역 스킬용)
      *
-     * @param playerX 플레이어 X 좌표
-     * @param playerY 플레이어 Y 좌표
+     * @param player 플레이어 (위치 추적용)
      * @param radius 범위 반경
      */
-    public void activateRangeMode(float playerX, float playerY, float radius) {
-        this.playerPosition.set(playerX, playerY);
-        this.targetPosition.set(playerX, playerY);
+    public void activateRangeMode(com.example.yugeup.game.player.Player player, float radius) {
+        this.playerRef = player;
+        this.playerPosition.set(player.getX(), player.getY());
+        this.targetPosition.set(player.getX(), player.getY());
         this.isActive = true;
         this.isRangeMode = true;
         this.rangeRadius = radius;
@@ -71,6 +74,7 @@ public class SkillDirectionIndicator {
      */
     public void deactivate() {
         this.isActive = false;
+        this.playerRef = null;  // 참조 해제
     }
 
     /**
@@ -91,6 +95,11 @@ public class SkillDirectionIndicator {
     public void render(ShapeRenderer shapeRenderer) {
         if (!isActive) {
             return;
+        }
+
+        // 플레이어 위치 자동 업데이트 (움직일 때도 화살표가 따라감)
+        if (playerRef != null) {
+            playerPosition.set(playerRef.getX(), playerRef.getY());
         }
 
         // 범위 표시 모드일 경우 원 그리기

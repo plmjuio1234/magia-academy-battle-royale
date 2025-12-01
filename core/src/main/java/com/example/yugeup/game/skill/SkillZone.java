@@ -5,9 +5,14 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
 import com.example.yugeup.game.monster.Monster;
+import com.example.yugeup.game.player.Player;
 import com.example.yugeup.network.NetworkManager;
+import com.example.yugeup.utils.Constants;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * 스킬 존(지속형 범위 공격) 기본 클래스
@@ -59,6 +64,11 @@ public abstract class SkillZone {
     protected List<Monster> monsterList;
     protected NetworkManager networkManager;
 
+    // PVP 피격판정용 (원격 플레이어)
+    protected Map<Integer, Player> remotePlayers;
+    protected Player myPlayer;  // 스킬 시전자 (자기 자신 제외용)
+    protected Set<Integer> hitPlayersThisTick;  // 이번 틱에 피격한 플레이어 (중복 방지)
+
     /**
      * 스킬 존 생성자
      *
@@ -92,6 +102,7 @@ public abstract class SkillZone {
         this.damageInterval = 0f;
         this.tickRate = 0.5f;  // 기본값: 0.5초마다 데미지
         this.hitMonsters = new ArrayList<>();
+        this.hitPlayersThisTick = new HashSet<>();
 
         // 애니메이션 로드
         this.animationName = animationName;
@@ -107,6 +118,17 @@ public abstract class SkillZone {
      */
     public void setMonsterList(List<Monster> monsters) {
         this.monsterList = monsters;
+    }
+
+    /**
+     * 원격 플레이어 목록 주입 메서드 (PVP용)
+     *
+     * @param remotePlayers 원격 플레이어 맵 (playerId -> Player)
+     * @param myPlayer 스킬 시전자 (자기 자신, 제외용)
+     */
+    public void setPlayerList(Map<Integer, Player> remotePlayers, Player myPlayer) {
+        this.remotePlayers = remotePlayers;
+        this.myPlayer = myPlayer;
     }
 
     /**
@@ -132,7 +154,9 @@ public abstract class SkillZone {
         damageInterval -= delta;
         if (damageInterval <= 0) {
             damageInterval = tickRate;
+            hitPlayersThisTick.clear();  // 틱마다 초기화
             applyDamageToNearbyMonsters();
+            applyDamageToNearbyPlayers();  // PVP 데미지
         }
     }
 
@@ -165,6 +189,61 @@ public abstract class SkillZone {
                 hitMonsters.remove((Integer) monster.getMonsterId());
             }
         }
+    }
+
+    /**
+     * 주변 플레이어에게 데미지를 적용합니다 (PVP).
+     *
+     * 존의 범위 내에 있는 모든 원격 플레이어를 찾아 데미지를 입힙니다.
+     */
+    public void applyDamageToNearbyPlayers() {
+        if (remotePlayers == null || remotePlayers.isEmpty()) return;
+
+        if (networkManager == null) {
+            networkManager = NetworkManager.getInstance();
+        }
+
+        for (Player player : remotePlayers.values()) {
+            if (player == null || player.isDead()) continue;
+
+            // 자기 자신 제외
+            if (myPlayer != null && player.getPlayerId() == myPlayer.getPlayerId()) continue;
+
+            // 이번 틱에 이미 피격한 플레이어는 제외
+            if (hitPlayersThisTick.contains(player.getPlayerId())) continue;
+
+            // 범위 체크
+            if (isPlayerInRange(player)) {
+                // PVP 데미지 계산 (0.5배)
+                int pvpDamage = (int) (damagePerTick * Constants.PVP_DAMAGE_MULTIPLIER);
+
+                // 서버로 PVP 공격 메시지 전송
+                if (networkManager != null) {
+                    networkManager.sendPvpAttack(player.getPlayerId(), pvpDamage, "ZoneSkill");
+                    System.out.println("[SkillZone] PVP 데미지! 플레이어 ID=" + player.getPlayerId() + ", 데미지=" + pvpDamage);
+                }
+
+                hitPlayersThisTick.add(player.getPlayerId());
+            }
+        }
+    }
+
+    /**
+     * 특정 플레이어가 범위 내에 있는지 확인합니다.
+     *
+     * @param player 확인할 플레이어
+     * @return 범위 내에 있으면 true
+     */
+    protected boolean isPlayerInRange(Player player) {
+        if (player == null || player.isDead()) {
+            return false;
+        }
+
+        float dx = player.getX() - position.x;
+        float dy = player.getY() - position.y;
+        float distance = (float) Math.sqrt(dx * dx + dy * dy);
+
+        return distance <= radius;
     }
 
     /**

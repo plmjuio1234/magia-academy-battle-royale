@@ -205,11 +205,15 @@ public class Monster {
             direction = (dx < 0) ? 0 : 1;  // 0=left, 1=right
         }
 
-        // 이동 중이면 MOVING 상태로 변경
-        if (distance > 5f) {
-            setState(MonsterState.MOVING);
-        } else {
-            setState(MonsterState.IDLE);
+        // 서버가 ATTACKING 상태를 전송한 경우 클라이언트에서 덮어쓰지 않음
+        // 서버 상태가 우선순위를 가짐
+        if (state != MonsterState.ATTACKING) {
+            // 이동 중이면 MOVING 상태로 변경
+            if (distance > 5f) {
+                setState(MonsterState.MOVING);
+            } else {
+                setState(MonsterState.IDLE);
+            }
         }
     }
 
@@ -509,6 +513,23 @@ public class Monster {
             if (animation != null) {
                 animation.resetStateTime();
             }
+        }
+    }
+
+    /**
+     * 문자열로부터 상태 설정 (서버 동기화용)
+     *
+     * @param stateStr 상태 문자열 ("IDLE", "MOVING", "ATTACKING" 등)
+     */
+    public void setStateFromString(String stateStr) {
+        if (stateStr == null || stateStr.isEmpty()) {
+            return;
+        }
+        try {
+            MonsterState newState = MonsterState.valueOf(stateStr.toUpperCase());
+            setState(newState);
+        } catch (IllegalArgumentException e) {
+            System.out.println("[Monster] 알 수 없는 상태: " + stateStr);
         }
     }
 

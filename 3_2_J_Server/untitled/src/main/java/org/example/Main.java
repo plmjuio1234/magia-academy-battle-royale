@@ -50,14 +50,17 @@ public class Main {
         static final int FOG_DAMAGE_PER_SECOND = 5;
         // fog 데미지 적용 간격 (서버 틱 기준)
         float fogDamageTimer = 0f;
-        // 플레이어 HP 관리 (playerId -> HP)
-        Map<Integer, Integer> playerHpMap = new HashMap<>();
         // 플레이어 최대 HP
         static final int PLAYER_MAX_HP = 100;
         // 사망한 플레이어 ID 목록 (순서대로)
         Set<Integer> deadPlayers = new HashSet<>();
         // 게임 종료 여부
         boolean gameEnded = false;
+
+        // HP 자동 재생 시스템
+        float hpRegenTimer = 0f;
+        static final float HP_REGEN_INTERVAL = 2.0f;  // 2초마다
+        static final int HP_REGEN_AMOUNT = 4;  // 2초마다 4 HP (= 2 HP/초)
 
         // 4개 구역 스폰 좌표 (사용자 확인 좌표)
         static final float[][] SPAWN_ZONES = {
@@ -342,6 +345,10 @@ public class Main {
         public int skillId;
         public float targetX, targetY;
 
+        // 시전자 위치 (방향 계산에 필수)
+        public float casterX;
+        public float casterY;
+
         // 스킬의 모든 필요한 정보 (클라이언트에서 전송)
         public String skillName;
         public String elementColor;      // "불", "물", "바람" 등
@@ -349,6 +356,17 @@ public class Main {
         public float projectileSpeed;    // 스킬별 속도
         public float projectileRadius;   // 투사체 크기
         public float projectileLifetime; // 투사체 수명
+
+        // 스킬 타입 (동기화 방식 결정용)
+        public int skillType;            // 0: Projectile, 1: Zone(고정), 2: Zone(이동), 3: Zone(플레이어 추적)
+
+        // 이동형 Zone용 추가 데이터
+        public float directionX;         // 이동 방향 X
+        public float directionY;         // 이동 방향 Y
+
+        // 다방향 발사용 (IceSpike)
+        public int projectileCount;      // 발사체 개수 (1이면 단일, 3이면 3방향 등)
+        public float angleSpread;        // 발사 각도 간격 (도)
 
         public SkillCastMsg() {}
     }
@@ -392,6 +410,60 @@ public class Main {
             room.fogDamageTimer = 0f;
             applyFogDamageToPlayers(room);
         }
+
+        // HP 자동 재생 처리 (2초마다)
+        room.hpRegenTimer += delta;
+        if (room.hpRegenTimer >= GameRoom.HP_REGEN_INTERVAL) {
+            room.hpRegenTimer -= GameRoom.HP_REGEN_INTERVAL;
+            applyHpRegenerationToPlayers(room);
+        }
+    }
+
+    /**
+     * 모든 플레이어에게 HP 자동 재생을 적용합니다.
+     * fog 구역 밖에 있고, 최대 HP 미만인 플레이어만 회복합니다.
+     *
+     * @param room 게임방
+     */
+    private static void applyHpRegenerationToPlayers(GameRoom room) {
+        for (PlayerData player : room.players) {
+            // 사망한 플레이어는 스킵
+            if (room.deadPlayers.contains(player.id)) {
+                continue;
+            }
+
+            GameRoom.PlayerPosition pos = room.playerPositions.get(player.id);
+            if (pos == null) {
+                continue;
+            }
+
+            // 현재 HP 확인
+            int currentHp = room.monsterManager.getPlayerHp(room.roomId, player.id);
+            if (currentHp >= GameRoom.PLAYER_MAX_HP) {
+                continue;  // 이미 최대 HP
+            }
+
+            // fog 구역 체크: fog 구역 밖에서만 재생
+            String playerZone = getPlayerZone(pos.x, pos.y, room.collisionMap);
+            boolean inActiveFogZone = (playerZone != null && room.activeFogZones.contains(playerZone));
+
+            if (!inActiveFogZone) {
+                // fog 밖에서만 HP 재생
+                int newHp = Math.min(GameRoom.PLAYER_MAX_HP, currentHp + GameRoom.HP_REGEN_AMOUNT);
+                room.monsterManager.setPlayerHp(room.roomId, player.id, newHp);
+
+                // HP 재생 알림 (FogDamageMsg를 재사용, damage를 음수로 표시하여 회복 의미)
+                FogDamageMsg regenMsg = new FogDamageMsg(
+                    player.id,
+                    -GameRoom.HP_REGEN_AMOUNT,  // 음수 = 회복
+                    newHp,
+                    "hp_regen"  // 특수 구역 이름
+                );
+                player.connection.sendTCP(regenMsg);
+
+                System.out.println("[HP 재생] " + player.name + ": " + currentHp + " → " + newHp + " HP");
+            }
+        }
     }
 
     /**
@@ -417,15 +489,10 @@ public class Main {
 
             // 해당 구역의 fog가 활성화되어 있으면 데미지
             if (playerZone != null && room.activeFogZones.contains(playerZone)) {
-                // HP 초기화 (없으면)
-                if (!room.playerHpMap.containsKey(player.id)) {
-                    room.playerHpMap.put(player.id, GameRoom.PLAYER_MAX_HP);
-                }
-
-                // 데미지 적용
-                int currentHp = room.playerHpMap.get(player.id);
+                // MonsterManager에서 HP 가져오기 (단일 HP 저장소 사용)
+                int currentHp = room.monsterManager.getPlayerHp(room.roomId, player.id);
                 int newHp = Math.max(0, currentHp - GameRoom.FOG_DAMAGE_PER_SECOND);
-                room.playerHpMap.put(player.id, newHp);
+                room.monsterManager.setPlayerHp(room.roomId, player.id, newHp);
 
                 // 데미지 메시지 전송
                 FogDamageMsg damageMsg = new FogDamageMsg(
@@ -473,12 +540,8 @@ public class Main {
         List<PlayerData> alivePlayers = new ArrayList<>();
         for (PlayerData p : room.players) {
             if (!room.deadPlayers.contains(p.id)) {
-                // HP 체크 (MonsterManager HP와 Fog HP 둘 다 체크)
-                int monsterHp = room.monsterManager.getPlayerHp(room.roomId, p.id);
-                int fogHp = room.playerHpMap.getOrDefault(p.id, GameRoom.PLAYER_MAX_HP);
-
-                // 둘 중 하나라도 0 이하면 사망
-                int effectiveHp = Math.min(monsterHp, fogHp);
+                // HP 체크 (MonsterManager에서 단일 HP 저장소 사용)
+                int effectiveHp = room.monsterManager.getPlayerHp(room.roomId, p.id);
 
                 if (effectiveHp <= 0) {
                     // 사망 처리
@@ -487,8 +550,8 @@ public class Main {
                     // 사망 순위 = 현재 생존자 수 + 이미 죽은 사람 수
                     int rank = room.players.size() - room.deadPlayers.size() + 1;
 
-                    // 사망 원인 판별 (fog HP가 더 낮으면 fog 사망)
-                    String killerName = (fogHp <= monsterHp) ? "안개" : "몬스터";
+                    // 사망 원인 판별 (환경 사망)
+                    String killerName = "안개/몬스터";
                     int killerId = -1;  // -1 = 환경 사망
 
                     // 사망 메시지 전송
@@ -960,10 +1023,7 @@ public class Main {
 
                         GameRoom room = player.currentRoom;
                         if (room != null && room.isPlaying) {
-                            // 플레이어 HP 맵 업데이트
-                            room.playerHpMap.put(player.id, msg.newCurrentHp);
-
-                            // MonsterManager의 HP도 업데이트
+                            // MonsterManager의 HP 업데이트 (단일 HP 저장소 사용)
                             room.monsterManager.setPlayerHp(room.roomId, player.id, msg.newCurrentHp);
 
                             System.out.println("[레벨업] " + player.name + " → Lv." + msg.newLevel +
