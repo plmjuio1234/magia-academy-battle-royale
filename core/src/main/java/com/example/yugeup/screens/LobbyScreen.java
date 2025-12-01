@@ -139,7 +139,7 @@ public class LobbyScreen implements Screen {
             com.example.yugeup.utils.UIDebugger.getLobbyCharPreviewY(),
             com.example.yugeup.utils.UIDebugger.getLobbyCharPreviewWidth(),
             com.example.yugeup.utils.UIDebugger.getLobbyCharPreviewHeight(),
-            font
+            font, buttonAtlas
         );
 
         // 이름 입력 다이얼로그 초기화

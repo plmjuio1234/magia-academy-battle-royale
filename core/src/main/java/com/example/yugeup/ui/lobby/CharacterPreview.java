@@ -4,6 +4,7 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Rectangle;
@@ -37,6 +38,7 @@ public class CharacterPreview {
     // 렌더링 도구
     private ShapeRenderer shapeRenderer;
     private BitmapFont font;
+    private final TextureAtlas atlas;
 
     // 버튼 활성화 상태
     private boolean startButtonEnabled;
@@ -50,12 +52,13 @@ public class CharacterPreview {
      * @param height 패널 높이
      * @param font 사용할 폰트
      */
-    public CharacterPreview(float x, float y, float width, float height, BitmapFont font) {
+    public CharacterPreview(float x, float y, float width, float height, BitmapFont font, TextureAtlas atlas) {
         this.x = x;
         this.y = y;
         this.width = width;
         this.height = height;
         this.font = font;
+        this.atlas = atlas;
 
         // 기본 닉네임 설정
         this.nickname = Constants.DEFAULT_NICKNAME_PREFIX + (int)(Math.random() * 1000);
@@ -148,9 +151,19 @@ public class CharacterPreview {
         font.draw(batch, nicknameText, nicknameX, characterY - 30);
 
         // [외형변경] 버튼 (중앙 하단)
-        font.setColor(Color.BLUE);
-        float buttonX = x + (width - 200) / 2;
-        font.draw(batch, "[외형변경]", buttonX + 40, y + 200);
+        if (atlas != null) {
+            batch.draw(
+                atlas.findRegion("name-change-button-defualt"),
+                customizeButtonBounds.x,
+                customizeButtonBounds.y,
+                customizeButtonBounds.width,
+                customizeButtonBounds.height
+            );
+        } else {
+            // 아틀라스가 없을 경우를 대비한 예전 텍스트 코드 (fallback)
+            font.setColor(Color.BLUE);
+            font.draw(batch, "[외형변경]", customizeButtonBounds.x + 20, customizeButtonBounds.y + 30);
+        }
     }
 
     /**

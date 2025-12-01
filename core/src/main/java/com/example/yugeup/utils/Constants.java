@@ -795,10 +795,10 @@ public class Constants {
     public static final String DEFAULT_NICKNAME_PREFIX = "Player";
 
     /** 로비 버튼 너비 */
-    public static final float LOBBY_BUTTON_WIDTH = 200f;
+    public static final float LOBBY_BUTTON_WIDTH = 300f;
 
     /** 로비 버튼 높이 */
-    public static final float LOBBY_BUTTON_HEIGHT = 60f;
+    public static final float LOBBY_BUTTON_HEIGHT = LOBBY_BUTTON_WIDTH * (32f/92f);
 
     /** 방 목록 새로고침 주기 (초) */
     public static final float LOBBY_REFRESH_INTERVAL = 5.0f;
