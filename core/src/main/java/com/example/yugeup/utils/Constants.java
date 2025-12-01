@@ -29,8 +29,9 @@ public class Constants {
     // ==================== 서버 설정 ====================
 
     /** 서버 호스트 주소 */
-    public static final String SERVER_HOST = "10.0.2.2"; //TODO: 서버 아이피 수정 <- 현재는 에뮬 전용 로컬호스트인 10.0.2.2로 하고 있음
-    //public static final String SERVER_HOST = "127.0.0.1";
+    public static final String SERVER_HOST = "219.254.146.234"; // 실제 로컬 IP로 변경 (에뮬레이터 + 실제 기기 모두 접속 가능)
+    //public static final String SERVER_HOST = "10.0.2.2"; // 에뮬레이터 전용
+    //public static final String SERVER_HOST = "127.0.0.1"; // 데스크톱 전용
 
     /** 서버 TCP 포트 */
     public static final int SERVER_PORT = 5000;
@@ -163,68 +164,115 @@ public class Constants {
     public static final float MAGIC_MISSILE_COOLDOWN = 0.5f;
 
 
-    // 불 원소 스킬
+    // ==================== 불 원소 스킬 (새 스펙) ====================
+
+    // 파이어볼 (단일 직선 공격)
     /** 파이어볼 데미지 */
     public static final int FIREBALL_DAMAGE = 30;
-
     /** 파이어볼 마나 소모 */
     public static final int FIREBALL_MANA_COST = 10;
-
     /** 파이어볼 쿨다운 (초) */
     public static final float FIREBALL_COOLDOWN = 2.0f;
+    /** 파이어볼 사거리 (픽셀) */
+    public static final float FIREBALL_RANGE = 300f;
+    /** 파이어볼 속도 (픽셀/초) */
+    public static final float FIREBALL_SPEED = 200f;
+    /** 파이어볼 히트박스 크기 (픽셀) */
+    public static final float FIREBALL_HITBOX_SIZE = 12f;
+    /** 파이어볼 이펙트 스케일 (렌더링용) */
+    public static final float FIREBALL_SCALE = 4f;
 
-
-    /** 플레임 웨이브 데미지 */
+    // 플레임 웨이브 (직선 투사체, 도트딜)
+    /** 플레임 웨이브 데미지 (틱당) */
     public static final int FLAME_WAVE_DAMAGE = 50;
-
     /** 플레임 웨이브 마나 소모 */
     public static final int FLAME_WAVE_MANA_COST = 20;
-
     /** 플레임 웨이브 쿨다운 (초) */
     public static final float FLAME_WAVE_COOLDOWN = 5.0f;
+    /** 플레임 웨이브 사거리 (픽셀) */
+    public static final float FLAME_WAVE_RANGE = 400f;
+    /** 플레임 웨이브 이동 속도 (픽셀/초) */
+    public static final float FLAME_WAVE_SPEED = 200f;
+    /** 플레임 웨이브 히트박스 크기 (픽셀) */
+    public static final float FLAME_WAVE_HITBOX_SIZE = 16f;
+    /** 플레임 웨이브 도트딜 간격 (초) */
+    public static final float FLAME_WAVE_TICK_RATE = 0.3f;
+    /** 플레임 웨이브 이펙트 스케일 (렌더링용) */
+    public static final float FLAME_WAVE_SCALE = 4f;
 
-
+    // 인페르노 (주변 범위 폭발) - Zone
     /** 인페르노 데미지 */
     public static final int INFERNO_DAMAGE = 100;
-
     /** 인페르노 마나 소모 */
     public static final int INFERNO_MANA_COST = 30;
-
     /** 인페르노 쿨다운 (초) */
     public static final float INFERNO_COOLDOWN = 10.0f;
+    /** 인페르노 범위 (픽셀) - 렌더링 크기의 절반 */
+    public static final float INFERNO_RANGE = 90f;
+    /** 인페르노 히트박스 크기 (픽셀) */
+    public static final float INFERNO_HITBOX_SIZE = 60f;
+    /** 인페르노 이펙트 스케일 */
+    public static final float INFERNO_SCALE = 3.0f;
+    /** 인페르노 Y 오프셋 (플레이어 위로, 양수) */
+    public static final float INFERNO_Y_OFFSET = 40f;
 
 
     // ==================== 원소 스킬 시스템 (PHASE_14-18) ====================
 
     // 물 원소 스킬
+    // 워터샷 (직선 투사체, 파이어볼보다 느리지만 큰 히트박스)
     /** 워터 샷 데미지 */
     public static final int WATER_SHOT_DAMAGE = 25;
     /** 워터 샷 마나 소모 */
     public static final int WATER_SHOT_MANA_COST = 10;
     /** 워터 샷 쿨다운 (초) */
     public static final float WATER_SHOT_COOLDOWN = 1.5f;
-    /** 워터 샷 발사 속도 (픽셀/초) */
-    public static final float WATER_SHOT_SPEED = 200f;
+    /** 워터 샷 발사 속도 (픽셀/초) - 파이어볼(200)보다 느림 */
+    public static final float WATER_SHOT_SPEED = 150f;
+    /** 워터 샷 사거리 (픽셀) */
+    public static final float WATER_SHOT_RANGE = 500f;
+    /** 워터 샷 히트박스 크기 (픽셀) */
+    public static final float WATER_SHOT_HITBOX_SIZE = 24f;
+    /** 워터 샷 이펙트 스케일 */
+    public static final float WATER_SHOT_SCALE = 2.5f;
 
+    // 아이스 스파이크 (3방향 발사, 빠른 속도)
     /** 아이스 스파이크 데미지 */
     public static final int ICE_SPIKE_DAMAGE = 35;
     /** 아이스 스파이크 마나 소모 */
     public static final int ICE_SPIKE_MANA_COST = 20;
     /** 아이스 스파이크 쿨다운 (초) */
     public static final float ICE_SPIKE_COOLDOWN = 3.0f;
-    /** 아이스 스파이크 관통 수 (최대 몇 명까지 타격) */
-    public static final int ICE_SPIKE_PIERCE_COUNT = 3;
+    /** 아이스 스파이크 발사 속도 (픽셀/초) - 파이어볼(200)보다 빠름 */
+    public static final float ICE_SPIKE_SPEED = 300f;
+    /** 아이스 스파이크 사거리 (픽셀) */
+    public static final float ICE_SPIKE_RANGE = 450f;
+    /** 아이스 스파이크 히트박스 크기 (픽셀) */
+    public static final float ICE_SPIKE_HITBOX_SIZE = 10f;
+    /** 아이스 스파이크 이펙트 스케일 */
+    public static final float ICE_SPIKE_SCALE = 3f;
+    /** 아이스 스파이크 발사 각도 간격 (도) */
+    public static final float ICE_SPIKE_ANGLE_SPREAD = 20f;
 
+    // 플러드 (관통 소용돌이 투사체)
     /** 플러드 데미지 */
     public static final int FLOOD_DAMAGE = 45;
     /** 플러드 마나 소모 */
     public static final int FLOOD_MANA_COST = 30;
     /** 플러드 쿨다운 (초) */
     public static final float FLOOD_COOLDOWN = 5.0f;
-    /** 플러드 범위 (픽셀) */
-    public static final float FLOOD_RADIUS = 150f;
-    /** 플러드 지속시간 (초) */
-    public static final float FLOOD_DURATION = 3.0f;
+    /** 플러드 발사 속도 (픽셀/초) - 느리게 이동하는 소용돌이 */
+    public static final float FLOOD_SPEED = 80f;
+    /** 플러드 사거리 (픽셀) */
+    public static final float FLOOD_RANGE = 600f;
+    /** 플러드 히트박스 너비 (픽셀) */
+    public static final float FLOOD_HITBOX_WIDTH = 60f;
+    /** 플러드 히트박스 높이 (픽셀) */
+    public static final float FLOOD_HITBOX_HEIGHT = 90f;
+    /** 플러드 이펙트 스케일 */
+    public static final float FLOOD_SCALE = 3f;
+    /** 플러드 도트딜 간격 (초) */
+    public static final float FLOOD_TICK_RATE = 0.3f;
 
     // 바람 원소 스킬
     /** 에어 슬래시 데미지 */
@@ -233,8 +281,18 @@ public class Constants {
     public static final int AIR_SLASH_MANA_COST = 15;
     /** 에어 슬래시 쿨다운 (초) */
     public static final float AIR_SLASH_COOLDOWN = 2.0f;
-    /** 에어 슬래시 발사 속도 (픽셀/초) */
-    public static final float AIR_SLASH_SPEED = 250f;
+    /** 에어 슬래시 근접 범위 (픽셀) - 24칸 */
+    public static final float AIR_SLASH_MELEE_RANGE = 24f;
+    /** 에어 슬래시 검기 사거리 (픽셀) */
+    public static final float AIR_SLASH_RANGE = 350f;
+    /** 에어 슬래시 검기 속도 (픽셀/초) */
+    public static final float AIR_SLASH_SPEED = 200f;
+    /** 에어 슬래시 검기 히트박스 너비 (픽셀) */
+    public static final float AIR_SLASH_HITBOX_WIDTH = 24f;
+    /** 에어 슬래시 검기 히트박스 높이 (픽셀) */
+    public static final float AIR_SLASH_HITBOX_HEIGHT = 10f;
+    /** 에어 슬래시 검기 스케일 */
+    public static final float AIR_SLASH_SCALE = 3f;
 
     /** 토네이도 데미지 */
     public static final int TORNADO_DAMAGE = 40;
@@ -242,85 +300,139 @@ public class Constants {
     public static final int TORNADO_MANA_COST = 20;
     /** 토네이도 쿨다운 (초) */
     public static final float TORNADO_COOLDOWN = 3.5f;
-    /** 토네이도 범위 (픽셀) */
-    public static final float TORNADO_RADIUS = 120f;
-    /** 토네이도 지속시간 (초) */
-    public static final float TORNADO_DURATION = 2.5f;
+    /** 토네이도 사거리 (픽셀) */
+    public static final float TORNADO_RANGE = 500f;
+    /** 토네이도 속도 (픽셀/초) */
+    public static final float TORNADO_SPEED = 200f;
+    /** 토네이도 히트박스 크기 (픽셀) */
+    public static final float TORNADO_HITBOX_SIZE = 18f;
+    /** 토네이도 스케일 */
+    public static final float TORNADO_SCALE = 3f;
 
-    /** 폭풍 데미지 */
+    /** 폭풍 데미지 (틱당) */
     public static final int STORM_DAMAGE = 50;
     /** 폭풍 마나 소모 */
     public static final int STORM_MANA_COST = 25;
     /** 폭풍 쿨다운 (초) */
     public static final float STORM_COOLDOWN = 4.0f;
-    /** 폭풍 범위 (픽셀) */
-    public static final float STORM_RADIUS = 100f;
+    /** 폭풍 히트박스 크기 (픽셀) - 64x64 */
+    public static final float STORM_HITBOX_SIZE = 64f;
+    /** 폭풍 스케일 */
+    public static final float STORM_SCALE = 2f;
     /** 폭풍 지속시간 (초) */
-    public static final float STORM_DURATION = 4.0f;
-    /** 폭풍 속도 증가 배수 */
+    public static final float STORM_DURATION = 8.0f;
+    /** 폭풍 속도 증가 배수 (50% 증가) */
     public static final float STORM_SPEED_MULTIPLIER = 1.5f;
+    /** 폭풍 도트딜 간격 (초) */
+    public static final float STORM_TICK_RATE = 0.3f;
 
     // 번개 원소 스킬
-    /** 라이트닝 볼트 데미지 */
-    public static final int LIGHTNING_BOLT_DAMAGE = 35;
+
+    // 라이트닝 볼트 (단일 낙뢰 타겟팅) - Zone
+    /** 라이트닝 볼트 데미지 (파이어볼의 70%) */
+    public static final int LIGHTNING_BOLT_DAMAGE = 21;
     /** 라이트닝 볼트 마나 소모 */
-    public static final int LIGHTNING_BOLT_MANA_COST = 15;
+    public static final int LIGHTNING_BOLT_MANA_COST = 10;
     /** 라이트닝 볼트 쿨다운 (초) */
     public static final float LIGHTNING_BOLT_COOLDOWN = 1.5f;
+    /** 라이트닝 볼트 시전 거리 (픽셀) - 방향 지정기 끝 부분 */
+    public static final float LIGHTNING_BOLT_TARGETING_RANGE = 100f;
+    /** 라이트닝 볼트 히트박스 크기 (픽셀) - 렌더링과 동일 (64*1.5=96) */
+    public static final float LIGHTNING_BOLT_HITBOX_SIZE = 96f;
+    /** 라이트닝 볼트 스케일 (크기 축소) */
+    public static final float LIGHTNING_BOLT_SCALE = 1.5f;
 
+    // 체인 라이트닝 (단순 투사체 - 연쇄 제거)
     /** 체인 라이트닝 데미지 */
-    public static final int CHAIN_LIGHTNING_DAMAGE = 40;
+    public static final int CHAIN_LIGHTNING_DAMAGE = 25;
     /** 체인 라이트닝 마나 소모 */
     public static final int CHAIN_LIGHTNING_MANA_COST = 20;
     /** 체인 라이트닝 쿨다운 (초) */
     public static final float CHAIN_LIGHTNING_COOLDOWN = 3.0f;
-    /** 체인 라이트닝 연쇄 범위 (픽셀) */
-    public static final float CHAIN_LIGHTNING_RANGE = 200f;
-    /** 체인 라이트닝 최대 연쇄 수 */
-    public static final int CHAIN_LIGHTNING_MAX_JUMPS = 4;
+    /** 체인 라이트닝 사거리 (픽셀) */
+    public static final float CHAIN_LIGHTNING_RANGE = 300f;
+    /** 체인 라이트닝 속도 (픽셀/초) */
+    public static final float CHAIN_LIGHTNING_SPEED = 180f;
+    /** 체인 라이트닝 히트박스 크기 (픽셀) - 렌더링과 동일 (16*2.5=40) */
+    public static final float CHAIN_LIGHTNING_HITBOX_SIZE = 40f;
+    /** 체인 라이트닝 스케일 */
+    public static final float CHAIN_LIGHTNING_SCALE = 2.5f;
 
+    // 썬더 스톰 (이동하는 구름 + 번개) - Zone
     /** 썬더 스톰 데미지 */
     public static final int THUNDER_STORM_DAMAGE = 50;
     /** 썬더 스톰 마나 소모 */
     public static final int THUNDER_STORM_MANA_COST = 30;
     /** 썬더 스톰 쿨다운 (초) */
     public static final float THUNDER_STORM_COOLDOWN = 5.0f;
-    /** 썬더 스톰 범위 (픽셀) */
-    public static final float THUNDER_STORM_RADIUS = 150f;
-    /** 썬더 스톰 지속시간 (초) */
-    public static final float THUNDER_STORM_DURATION = 3.0f;
+    /** 썬더 스톰 구름 속도 (픽셀/초) */
+    public static final float THUNDER_STORM_CLOUD_SPEED = 20f;
+    /** 썬더 스톰 사거리 (픽셀) */
+    public static final float THUNDER_STORM_RANGE = 200f;
+    /** 썬더 스톰 구름-번개 오프셋 Y (픽셀) */
+    public static final float THUNDER_STORM_CLOUD_OFFSET_Y = 60f;
+    /** 썬더 스톰 번개 히트박스 가로 (픽셀) - 렌더링과 동일 (64*3.5=224) */
+    public static final float THUNDER_STORM_LIGHTNING_HITBOX_WIDTH = 224f;
+    /** 썬더 스톰 번개 히트박스 세로 (픽셀) - 렌더링과 동일 (64*1.8=115) */
+    public static final float THUNDER_STORM_LIGHTNING_HITBOX_HEIGHT = 115f;
+    /** 썬더 스톰 구름 스케일 Y (세로) - 살짝 축소 */
+    public static final float THUNDER_STORM_CLOUD_SCALE_Y = 1.8f;
+    /** 썬더 스톰 구름 스케일 X (가로) - 살짝 축소 */
+    public static final float THUNDER_STORM_CLOUD_SCALE_X = 3.5f;
+    /** 썬더 스톰 번개 스케일 Y (세로) - 살짝 축소 */
+    public static final float THUNDER_STORM_LIGHTNING_SCALE_Y = 1.8f;
+    /** 썬더 스톰 번개 스케일 X (가로) - 살짝 축소 */
+    public static final float THUNDER_STORM_LIGHTNING_SCALE_X = 3.5f;
 
     // 땅 원소 스킬
+
+    // 록 스매시 (가장 가까운 적 위에 돌 떨어뜨리기) - Zone
     /** 록 스매시 데미지 */
-    public static final int ROCK_SMASH_DAMAGE = 40;
+    public static final int ROCK_SMASH_DAMAGE = 60;
     /** 록 스매시 마나 소모 */
     public static final int ROCK_SMASH_MANA_COST = 15;
     /** 록 스매시 쿨다운 (초) */
     public static final float ROCK_SMASH_COOLDOWN = 2.5f;
-    /** 록 스매시 발사 속도 (픽셀/초) */
-    public static final float ROCK_SMASH_SPEED = 180f;
-    /** 록 스매시 기절 지속시간 (초) */
-    public static final float ROCK_SMASH_STUN_DURATION = 1.0f;
+    /** 록 스매시 히트박스 크기 (픽셀) - 48x48 */
+    public static final float ROCK_SMASH_HITBOX_SIZE = 48f;
+    /** 록 스매시 스케일 */
+    public static final float ROCK_SMASH_SCALE = 2f;
+    /** 록 스매시 타겟팅 범위 (픽셀) */
+    public static final float ROCK_SMASH_TARGETING_RANGE = 300f;
+    /** 록 스매시 체공 시간 (초) - 돌이 떨어지는 시간 */
+    public static final float ROCK_SMASH_FALL_DURATION = 0.5f;
+    /** 록 스매시 잔존 시간 (초) - 바닥에 떨어진 후 */
+    public static final float ROCK_SMASH_LINGER_DURATION = 1.0f;
 
+    // 어스 스파이크 (바닥에서 가시 솟아오르기) - 이동형 Zone
     /** 어스 스파이크 데미지 */
-    public static final int EARTH_SPIKE_DAMAGE = 35;
+    public static final int EARTH_SPIKE_DAMAGE = 45;
     /** 어스 스파이크 마나 소모 */
     public static final int EARTH_SPIKE_MANA_COST = 18;
     /** 어스 스파이크 쿨다운 (초) */
     public static final float EARTH_SPIKE_COOLDOWN = 2.0f;
-    /** 어스 스파이크 범위 (픽셀) */
-    public static final float EARTH_SPIKE_RADIUS = 100f;
+    /** 어스 스파이크 사거리 (픽셀) */
+    public static final float EARTH_SPIKE_RANGE = 400f;
+    /** 어스 스파이크 속도 (픽셀/초) */
+    public static final float EARTH_SPIKE_SPEED = 250f;
+    /** 어스 스파이크 히트박스 너비 (픽셀) */
+    public static final float EARTH_SPIKE_HITBOX_WIDTH = 36f;
+    /** 어스 스파이크 히트박스 높이 (픽셀) */
+    public static final float EARTH_SPIKE_HITBOX_HEIGHT = 24f;
+    /** 어스 스파이크 스케일 */
+    public static final float EARTH_SPIKE_SCALE = 3f;
 
+    // 스톤 실드 (피해 50% 감소) - Zone
     /** 스톤 실드 마나 소모 */
     public static final int STONE_SHIELD_MANA_COST = 20;
     /** 스톤 실드 쿨다운 (초) */
-    public static final float STONE_SHIELD_COOLDOWN = 4.0f;
-    /** 스톤 실드 방어력 증가 */
-    public static final int STONE_SHIELD_DEF_BONUS = 10;
-    /** 스톤 실드 초당 회복량 */
-    public static final int STONE_SHIELD_HP_PER_SECOND = 5;
+    public static final float STONE_SHIELD_COOLDOWN = 10.0f;
+    /** 스톤 실드 데미지 감소율 (50% 감소) */
+    public static final float STONE_SHIELD_DAMAGE_REDUCTION = 0.5f;
     /** 스톤 실드 지속시간 (초) */
-    public static final float STONE_SHIELD_DURATION = 5.0f;
+    public static final float STONE_SHIELD_DURATION = 8.0f;
+    /** 스톤 실드 스케일 */
+    public static final float STONE_SHIELD_SCALE = 1.2f;
 
 
     // ==================== 원소 시스템 설정 (PHASE_13) ====================
@@ -413,6 +525,27 @@ public class Constants {
     public static final int ZONE_DAMAGE_PER_SECOND = 5;
 
 
+    // ==================== Fog 시스템 설정 (PHASE_24) ====================
+
+    /** Fog 활성화 간격 (초) - 2분 */
+    public static final float FOG_ACTIVATION_INTERVAL = 120f;
+
+    /** Fog 구역 개수 */
+    public static final int FOG_ZONE_COUNT = 5;
+
+    /** Fog 데미지 (초당) */
+    public static final int FOG_DAMAGE_PER_SECOND = 5;
+
+    /** Fog 구역 이름들 */
+    public static final String[] FOG_ZONE_NAMES = {
+        "town-square",    // 중앙 광장 (마지막 활성화)
+        "dormitory",      // 기숙사
+        "library",        // 도서관
+        "classroom",      // 교실
+        "alchemy-room"    // 연금술실
+    };
+
+
     // ==================== 전투 설정 ====================
 
     /** 데미지 계산: 방어력 감소 계수 (DEF * 2 = 감소 데미지) */
@@ -423,6 +556,47 @@ public class Constants {
 
     /** 크리티컬 데미지 배수 */
     public static final float CRITICAL_MULTIPLIER = 1.5f;
+
+
+    // ==================== PVP 설정 ====================
+
+    /** PVP 데미지 배율 (플레이어에게 가하는 데미지는 30% - 70% 감소) */
+    public static final float PVP_DAMAGE_MULTIPLIER = 0.3f;
+
+    /** 카메라 줌 레벨 (실제 화면 크기 계산용) */
+    public static final float CAMERA_ZOOM = 0.3f;
+
+
+    // ==================== 자동공격 (매직 미사일) 설정 ====================
+
+    /** 자동공격 타겟팅 범위 (픽셀) - 세로 기준 + 여유 */
+    public static final float AUTO_ATTACK_TARGETING_RANGE = 250f;
+
+    /** 발사체 충돌 반경 (픽셀) - 발사체 크기(24px)와 동일 */
+    public static final float PROJECTILE_COLLISION_RADIUS = 24f;
+
+    /** 서버 공격 검증 거리 (픽셀) - 타겟팅 범위와 동일하게 */
+    public static final float SERVER_ATTACK_VALIDATION_RANGE = 250f;
+
+    /**
+     * 자동공격 타겟팅 범위 반환
+     *
+     * @return 타겟팅 범위 (픽셀)
+     */
+    public static float getTargetingRange() {
+        return AUTO_ATTACK_TARGETING_RANGE;
+    }
+
+    /**
+     * 충돌 반경 (플레이어/몬스터 히트박스)
+     * 플레이어 크기(128px)의 절반 정도가 적절함
+     *
+     * @return 충돌 반경 (픽셀)
+     */
+    public static float getCollisionRadius() {
+        // 플레이어 크기 기준으로 적절한 충돌 반경 (64픽셀)
+        return PLAYER_SIZE * 0.5f;
+    }
 
 
     // ==================== UI 설정 ====================

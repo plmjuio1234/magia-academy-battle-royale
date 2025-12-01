@@ -55,14 +55,17 @@ public class SkillEffectManager {
     private void loadAllAnimations() {
         System.out.println("[SkillEffectManager] 애니메이션 로드 시작");
 
-        // Fireball (4프레임, 루프)
+        // Fireball (loop 4프레임, end 6프레임)
         loadAnimation("fireball-loop", 0, 3, 0.08f, Animation.PlayMode.LOOP);
+        loadAnimation("fireball-end", 0, 5, 0.08f, Animation.PlayMode.NORMAL);
 
         // Ice Spike (10프레임, 루프)
         loadAnimation("ice_spike-loop", 0, 9, 0.08f, Animation.PlayMode.LOOP);
 
-        // Flame Wave (6프레임, 루프)
+        // Flame Wave (start 3프레임, loop 6프레임, end 5프레임)
+        loadAnimation("flame_wave-start", 0, 2, 0.1f, Animation.PlayMode.NORMAL);
         loadAnimation("flame_wave-loop", 0, 5, 0.1f, Animation.PlayMode.LOOP);
+        loadAnimation("flame_wave-end", 0, 4, 0.1f, Animation.PlayMode.NORMAL);
 
         // Water Ball (17프레임, 루프)
         loadAnimation("water_ball-loop", 0, 16, 0.06f, Animation.PlayMode.LOOP);
@@ -70,12 +73,12 @@ public class SkillEffectManager {
         // Air Slash (6프레임, 루프)
         loadAnimation("air_slash-loop", 0, 5, 0.08f, Animation.PlayMode.LOOP);
 
-        // Lightning Volt (7프레임, 루프)
-        loadAnimation("lightning_volt", 0, 6, 0.08f, Animation.PlayMode.LOOP);
+        // Lightning Volt (단일 낙뢰, 5프레임 - 0,1,2,4,6만 존재, 일회)
+        loadAnimation("lightning_volt", 0, 6, 0.1f, Animation.PlayMode.NORMAL);
 
         // Chain Lightning (발사체 5프레임, 체인 4프레임)
         loadAnimation("chain_lightning-projectile", 0, 4, 0.08f, Animation.PlayMode.LOOP);
-        loadAnimation("chain_lightning-chain", 0, 3, 0.08f, Animation.PlayMode.LOOP);
+        loadAnimation("chain_lightning-chain", 0, 3, 0.1f, Animation.PlayMode.LOOP);
 
         // Storm (9프레임, 루프)
         loadAnimation("storm-loop", 0, 8, 0.12f, Animation.PlayMode.LOOP);
@@ -89,17 +92,26 @@ public class SkillEffectManager {
         // Flood (8프레임, 루프)
         loadAnimation("flood_loop", 0, 7, 0.1f, Animation.PlayMode.LOOP);
 
-        // Thunder Storm Lightning (12프레임, 루프)
+        // Thunder Storm Cloud (구름, 4프레임 - 0,1,2,3, 루프)
+        loadAnimation("thunder_storm-cloud", 0, 3, 0.12f, Animation.PlayMode.LOOP);
+
+        // Thunder Storm Lightning (번개, 12프레임, 루프)
         loadAnimation("thunder_storm-lightning", 0, 11, 0.1f, Animation.PlayMode.LOOP);
 
-        // Earth Spike (8프레임, 일회)
-        loadAnimation("earth_spike", 0, 7, 0.1f, Animation.PlayMode.NORMAL);
+        // Earth Spike (8프레임, 루프) - 프레임 시간 늘려서 더 오래 보이게
+        loadAnimation("earth_spike", 0, 7, 0.15f, Animation.PlayMode.LOOP);
 
-        // Rock Smash (6프레임, 일회)
+        // Rock Smash Start (6프레임, 일회)
         loadAnimation("rock_smash-start", 0, 5, 0.08f, Animation.PlayMode.NORMAL);
 
-        // Stone Shield (9프레임, 루프)
-        loadAnimation("stone_shield-loop", 0, 8, 0.12f, Animation.PlayMode.LOOP);
+        // Rock Smash End (5프레임, 일회)
+        loadAnimation("rock_smash-end", 0, 4, 0.1f, Animation.PlayMode.NORMAL);
+
+        // Stone Shield Start (3프레임, 일회)
+        loadAnimation("stone_shield-start", 0, 2, 0.1f, Animation.PlayMode.NORMAL);
+
+        // Stone Shield Loop (8프레임, 루프)
+        loadAnimation("stone_shield-loop", 0, 7, 0.12f, Animation.PlayMode.LOOP);
 
         System.out.println("[SkillEffectManager] 총 " + animations.size() + "개 애니메이션 로드 완료");
     }

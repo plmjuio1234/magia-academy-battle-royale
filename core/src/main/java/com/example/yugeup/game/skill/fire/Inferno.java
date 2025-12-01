@@ -53,12 +53,14 @@ public class Inferno extends ElementalSkill {
             return;
         }
 
-        // 인페르노 지역 생성 (플레이어 중심)
+        // 인페르노 지역 생성 (플레이어 중심, 즉발 폭발)
+        // 애니메이션 재생시간 계산 (18프레임 * 0.08초 = 약 1.44초)
+        float animDuration = 18 * 0.08f;
         InfernoZone zone = new InfernoZone(
             caster.getX(),
             caster.getY(),
             getDamage(),
-            2.0f  // 지속 시간
+            animDuration  // 애니메이션 지속시간
         );
 
         activeZones.add(zone);

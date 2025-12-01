@@ -6,6 +6,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector2;
 import com.example.yugeup.game.monster.Monster;
 import com.example.yugeup.network.NetworkManager;
+import com.example.yugeup.utils.Constants;
 
 /**
  * 발사체 클래스
@@ -36,8 +37,8 @@ public class Projectile {
 
     // 렌더링
     private Texture texture;
-    private float size = 24f;  // 16 → 24로 50% 증가
-    private static final float COLLISION_RADIUS = 12f;  // 8 → 12로 증가
+    private float size = 24f;  // 발사체 표시 크기
+    // 충돌 반경은 Constants.PROJECTILE_COLLISION_RADIUS 사용 (24픽셀)
 
     // 네트워크
     private Vector2 playerPosition;  // 발사 시점의 플레이어 위치 (서버 검증용)
@@ -136,8 +137,8 @@ public class Projectile {
         float dy = centerY - position.y;
         float distance = (float) Math.sqrt(dx * dx + dy * dy);
 
-        // 충돌 판정
-        if (distance <= COLLISION_RADIUS) {
+        // 충돌 판정 (Constants에서 충돌 반경 가져옴)
+        if (distance <= Constants.PROJECTILE_COLLISION_RADIUS) {
             // 서버로 공격 메시지 전송 (서버가 데미지 처리)
             NetworkManager networkManager = NetworkManager.getInstance();
             if (networkManager != null) {

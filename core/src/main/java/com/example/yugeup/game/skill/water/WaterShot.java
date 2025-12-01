@@ -37,7 +37,8 @@ public class WaterShot extends ElementalSkill {
         Vector2 direction = targetPosition.cpy().sub(casterPos).nor();
 
         WaterShotProjectile projectile = new WaterShotProjectile(
-            casterPos, direction.x, direction.y, getDamage(), Constants.WATER_SHOT_SPEED
+            casterPos, direction.x, direction.y, getDamage(),
+            Constants.WATER_SHOT_SPEED, Constants.WATER_SHOT_RANGE
         );
 
         activeProjectiles.add(projectile);

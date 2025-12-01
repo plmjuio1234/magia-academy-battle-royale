@@ -6,6 +6,11 @@ import org.example.MonsterUpdateMsg;
 import org.example.MonsterDeathMsg;
 import org.example.MonsterDamageMsg;
 import org.example.PlayerAttackMonsterMsg;
+import com.example.yugeup.network.messages.FogZoneMsg;
+import com.example.yugeup.network.messages.FogDamageMsg;
+import com.example.yugeup.network.messages.MonsterAttackPlayerMsg;
+import com.example.yugeup.network.messages.PlayerAttackPlayerMsg;
+import com.example.yugeup.network.messages.PlayerDeathMsg;
 import com.example.yugeup.network.messages.ProjectileFiredMsg;
 import com.example.yugeup.network.messages.SkillCastMsg;
 import com.example.yugeup.utils.Constants;
@@ -36,6 +41,15 @@ public class MessageHandler {
     // 스킬 시전 메시지 큐
     private ConcurrentLinkedQueue<SkillCastMsg> skillCastQueue;
 
+    // Fog 시스템 메시지 큐 (PHASE_24)
+    private ConcurrentLinkedQueue<FogZoneMsg> fogZoneQueue;
+    private ConcurrentLinkedQueue<FogDamageMsg> fogDamageQueue;
+
+    // 전투 시스템 메시지 큐 (PHASE_25)
+    private ConcurrentLinkedQueue<MonsterAttackPlayerMsg> monsterAttackPlayerQueue;
+    private ConcurrentLinkedQueue<PlayerAttackPlayerMsg> playerAttackPlayerQueue;
+    private ConcurrentLinkedQueue<PlayerDeathMsg> playerDeathQueue;
+
     private MessageHandler() {
         this.roomListQueue = new ConcurrentLinkedQueue<>();
         this.joinRoomQueue = new ConcurrentLinkedQueue<>();
@@ -58,6 +72,15 @@ public class MessageHandler {
 
         // 스킬 시전 메시지 큐 초기화
         this.skillCastQueue = new ConcurrentLinkedQueue<>();
+
+        // Fog 시스템 메시지 큐 초기화 (PHASE_24)
+        this.fogZoneQueue = new ConcurrentLinkedQueue<>();
+        this.fogDamageQueue = new ConcurrentLinkedQueue<>();
+
+        // 전투 시스템 메시지 큐 초기화 (PHASE_25)
+        this.monsterAttackPlayerQueue = new ConcurrentLinkedQueue<>();
+        this.playerAttackPlayerQueue = new ConcurrentLinkedQueue<>();
+        this.playerDeathQueue = new ConcurrentLinkedQueue<>();
     }
 
     public static synchronized MessageHandler getInstance() {
@@ -123,6 +146,30 @@ public class MessageHandler {
                 System.out.println("[MessageHandler] SkillCastMsg 수신");
             }
         }
+        // Fog 시스템 메시지 처리 (PHASE_24)
+        else if (message instanceof FogZoneMsg) {
+            fogZoneQueue.offer((FogZoneMsg) message);
+            System.out.println("[MessageHandler] ★ FogZoneMsg 수신: " + ((FogZoneMsg) message).zoneName);
+        }
+        else if (message instanceof FogDamageMsg) {
+            FogDamageMsg fogDmg = (FogDamageMsg) message;
+            fogDamageQueue.offer(fogDmg);
+            System.out.println("[MessageHandler] ★★★ FogDamageMsg 수신: playerId=" + fogDmg.playerId +
+                ", damage=" + fogDmg.damage + ", newHp=" + fogDmg.newHp + ", zone=" + fogDmg.zoneName);
+        }
+        // 전투 시스템 메시지 처리 (PHASE_25)
+        else if (message instanceof MonsterAttackPlayerMsg) {
+            monsterAttackPlayerQueue.offer((MonsterAttackPlayerMsg) message);
+            System.out.println("[MessageHandler] MonsterAttackPlayerMsg 수신");
+        }
+        else if (message instanceof PlayerAttackPlayerMsg) {
+            playerAttackPlayerQueue.offer((PlayerAttackPlayerMsg) message);
+            System.out.println("[MessageHandler] PlayerAttackPlayerMsg 수신 (PVP)");
+        }
+        else if (message instanceof PlayerDeathMsg) {
+            playerDeathQueue.offer((PlayerDeathMsg) message);
+            System.out.println("[MessageHandler] PlayerDeathMsg 수신");
+        }
     }
 
     public RoomListResponse pollRoomListResponse() {
@@ -183,5 +230,29 @@ public class MessageHandler {
 
     public SkillCastMsg pollSkillCastMsg() {
         return skillCastQueue.poll();
+    }
+
+    // ===== Fog 시스템 메시지 Getter (PHASE_24) =====
+
+    public FogZoneMsg pollFogZoneMsg() {
+        return fogZoneQueue.poll();
+    }
+
+    public FogDamageMsg pollFogDamageMsg() {
+        return fogDamageQueue.poll();
+    }
+
+    // ===== 전투 시스템 메시지 Getter (PHASE_25) =====
+
+    public MonsterAttackPlayerMsg pollMonsterAttackPlayerMsg() {
+        return monsterAttackPlayerQueue.poll();
+    }
+
+    public PlayerAttackPlayerMsg pollPlayerAttackPlayerMsg() {
+        return playerAttackPlayerQueue.poll();
+    }
+
+    public PlayerDeathMsg pollPlayerDeathMsg() {
+        return playerDeathQueue.poll();
     }
 }

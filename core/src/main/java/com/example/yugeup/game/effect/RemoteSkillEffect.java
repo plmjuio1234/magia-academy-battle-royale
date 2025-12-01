@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
 import com.example.yugeup.game.skill.SkillEffectManager;
+import com.example.yugeup.network.messages.SkillCastMsg;
 
 /**
  * 원격 플레이어의 스킬 이펙트 클래스
@@ -21,22 +22,24 @@ public class RemoteSkillEffect {
     private Animation<TextureRegion> animation;
     private float animationTime;
     private float lifetime;
-    private float maxLifetime = 3.0f;  // 최대 수명
+    private float maxLifetime = 3.0f;  // 최대 수명 (기본값)
     private boolean isAlive;
-    private float speed = 200f;  // 기본 속도
+    private float speed = 200f;  // 기본 속도 (기본값)
     private Vector2 currentPosition;
-    private float size = 48f;
+    private float size = 48f;  // 기본 크기 (기본값)
     private boolean isProjectile = true;  // 투사체 여부 (false면 Zone)
 
     /**
-     * 원격 스킬 이펙트 생성자
+     * 원격 스킬 이펙트 생성자 (레거시)
      *
      * @param skillId 스킬 ID
      * @param startX 시작 X 좌표
      * @param startY 시작 Y 좌표
      * @param targetX 목표 X 좌표
      * @param targetY 목표 Y 좌표
+     * @deprecated SkillCastMsg를 받는 생성자 사용 권장
      */
+    @Deprecated
     public RemoteSkillEffect(int skillId, float startX, float startY, float targetX, float targetY) {
         this.skillId = skillId;
         this.startPosition = new Vector2(startX, startY);
@@ -55,6 +58,46 @@ public class RemoteSkillEffect {
             this.currentPosition = new Vector2(startX, startY);
         } else {
             this.currentPosition = new Vector2(targetX, targetY);
+        }
+    }
+
+    /**
+     * 원격 스킬 이펙트 생성자 (SkillCastMsg 버전)
+     * 스킬의 상세 정보를 SkillCastMsg에서 받아서 동적으로 설정합니다.
+     *
+     * @param msg 스킬 시전 메시지
+     * @param startX 시작 X 좌표
+     * @param startY 시작 Y 좌표
+     */
+    public RemoteSkillEffect(SkillCastMsg msg, float startX, float startY) {
+        this.skillId = msg.skillId;
+        this.startPosition = new Vector2(startX, startY);
+        this.animationTime = 0f;
+        this.lifetime = 0f;
+        this.isAlive = true;
+
+        // 방향 계산
+        this.direction = new Vector2(msg.targetX - startX, msg.targetY - startY).nor();
+
+        // 스킬 ID에 따라 애니메이션 로드 (isProjectile 설정됨)
+        loadAnimationForSkill(msg.skillId);
+
+        // SkillCastMsg에서 속도, 크기, 수명 정보가 있으면 사용
+        if (msg.projectileSpeed > 0) {
+            this.speed = msg.projectileSpeed;
+        }
+        if (msg.projectileRadius > 0) {
+            this.size = msg.projectileRadius * 2;  // 반지름 -> 지름
+        }
+        if (msg.projectileLifetime > 0) {
+            this.maxLifetime = msg.projectileLifetime;
+        }
+
+        // Zone 스킬은 targetPosition에 생성, 투사체는 시작 위치에서 시작
+        if (isProjectile) {
+            this.currentPosition = new Vector2(startX, startY);
+        } else {
+            this.currentPosition = new Vector2(msg.targetX, msg.targetY);
         }
     }
 
