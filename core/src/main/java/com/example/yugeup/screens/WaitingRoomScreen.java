@@ -419,9 +419,9 @@ public class WaitingRoomScreen implements Screen {
 
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
         if (sendButtonHovered) {
-            shapeRenderer.setColor(0.3f, 0.6f, 0.9f, 1f);  // 호버 시 밝은 파란색
+            shapeRenderer.setColor(Color.valueOf(("#d39673")));  // 호버 시 밝은 파란색
         } else {
-            shapeRenderer.setColor(0.2f, 0.4f, 0.7f, 1f);  // 기본 파란색
+            shapeRenderer.setColor(Color.valueOf("#a56b52"));  // 기본 파란색
         }
         // 둥근 모서리 전송 버튼 (반경 6px)
         renderRoundedRect(shapeRenderer, sendButtonBounds.x, sendButtonBounds.y,
