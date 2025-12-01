@@ -280,6 +280,13 @@ public class PlayerStats {
     public void setCurrentHealth(int health) {
         int oldHealth = this.currentHealth;
         this.currentHealth = Math.max(0, Math.min(maxHealth, health));
+
+        // 디버그 로그 추가
+        if (oldHealth != currentHealth) {
+            System.out.println("[PlayerStats] HP 변경: " + oldHealth + " → " + currentHealth +
+                " (입력값: " + health + ", maxHealth: " + maxHealth + ")");
+        }
+
         notifyHealthChanged(oldHealth, currentHealth);
     }
 

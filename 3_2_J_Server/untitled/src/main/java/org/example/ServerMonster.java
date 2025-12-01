@@ -30,6 +30,7 @@ public abstract class ServerMonster {
     private float syncTimer = 0;
     private static final float SYNC_INTERVAL = 0.1f;  // 100ms
     protected int lastAttackerId = -1;  // 마지막 공격자 ID (경험치 지급용)
+    protected boolean hasAttackedThisCycle = false;  // 이번 공격 사이클에서 공격했는지
 
     public ServerMonster(int id, float x, float y, int hp, String type) {
         this.id = id;
@@ -57,16 +58,43 @@ public abstract class ServerMonster {
         float oldY = y;
 
         // 위치 업데이트
-        x += vx * delta;
-        y += vy * delta;
+        float newX = x + vx * delta;
+        float newY = y + vy * delta;
 
-        // NEW : 벽 충돌 체크 (클라이언트와 동일한 로직)
-        if (monsterManager != null && monsterManager.isWallInArea(x, y, 12f)) {
-            // 벽에 부딪히면 원위치
-            x = oldX;
-            y = oldY;
-            vx = 0;
-            vy = 0;
+        // NEW : 벽 충돌 체크 및 우회 로직
+        if (monsterManager != null) {
+            float collisionRadius = 16f;  // 충돌 반경
+
+            // X축, Y축 각각 체크하여 슬라이딩 이동
+            boolean canMoveX = !monsterManager.isWallInArea(newX, oldY, collisionRadius);
+            boolean canMoveY = !monsterManager.isWallInArea(oldX, newY, collisionRadius);
+
+            if (canMoveX && canMoveY) {
+                // 대각선 이동 가능
+                if (!monsterManager.isWallInArea(newX, newY, collisionRadius)) {
+                    x = newX;
+                    y = newY;
+                } else {
+                    // 대각선 불가, X축만 이동
+                    x = newX;
+                }
+            } else if (canMoveX) {
+                // X축만 이동 가능
+                x = newX;
+                vy = 0;
+            } else if (canMoveY) {
+                // Y축만 이동 가능
+                y = newY;
+                vx = 0;
+            } else {
+                // 완전히 막힌 경우 - 제자리 대기 (순간이동 방지)
+                vx = 0;
+                vy = 0;
+            }
+        } else {
+            // monsterManager 없으면 그냥 이동
+            x = newX;
+            y = newY;
         }
 
         // 맵 경계 제한
@@ -124,6 +152,36 @@ public abstract class ServerMonster {
     }
 
     /**
+     * 현재 공격 가능 상태인지 반환
+     * ATTACKING 상태이고, 쿨다운이 막 리셋되었고, 아직 이번 사이클에서 공격하지 않았을 때 true
+     */
+    public boolean canAttackNow() {
+        if (currentState.equals("ATTACKING") && currentAttackCooldown >= attackCooldown * 0.9f && !hasAttackedThisCycle) {
+            hasAttackedThisCycle = true;  // 공격했음을 표시
+            return true;
+        }
+        // 쿨다운이 절반 이하로 내려가면 다음 공격 가능하도록 리셋
+        if (currentAttackCooldown < attackCooldown * 0.5f) {
+            hasAttackedThisCycle = false;
+        }
+        return false;
+    }
+
+    /**
+     * 현재 공격 대상 플레이어 ID 반환
+     */
+    public Integer getTargetPlayerId() {
+        return targetPlayerId;
+    }
+
+    /**
+     * 공격 데미지 반환
+     */
+    public int getAttackDamage() {
+        return attackDamage;
+    }
+
+    /**
      * 맵 경계 제한 (4000x4000 맵)
      */
     protected void clampToMapBounds() {
@@ -157,9 +215,9 @@ public abstract class ServerMonster {
         public Ghost(int id, float x, float y) {
             super(id, x, y, 60, "Ghost");
             this.speed = 120f;
-            this.aggroRange = 3000f;  // 화면 크기만큼 확대
-            this.attackRange = 300f;
-            this.attackDamage = 25;
+            this.aggroRange = 300f;
+            this.attackRange = 20f;  // 스프라이트 근접 (대폭 축소)
+            this.attackDamage = 5;
             this.attackCooldown = 2.0f;
         }
 
@@ -236,9 +294,9 @@ public abstract class ServerMonster {
         public Bat(int id, float x, float y) {
             super(id, x, y, 50, "Bat");
             this.speed = 100f;
-            this.aggroRange = 3000f;  // 화면 크기만큼 확대
-            this.attackRange = 40f;
-            this.attackDamage = 20;
+            this.aggroRange = 250f;
+            this.attackRange = 16f;  // 스프라이트 근접 (대폭 축소)
+            this.attackDamage = 3;
             this.attackCooldown = 1.8f;
         }
 
@@ -299,9 +357,9 @@ public abstract class ServerMonster {
         public Golem(int id, float x, float y) {
             super(id, x, y, 150, "Golem");
             this.speed = 50f;
-            this.aggroRange = 3000f;  // 화면 크기만큼 확대
-            this.attackRange = 150f;
-            this.attackDamage = 50;
+            this.aggroRange = 350f;
+            this.attackRange = 24f;   // 스프라이트 근접 (대폭 축소)
+            this.attackDamage = 10;
             this.attackCooldown = 4.0f;
         }
 
@@ -321,7 +379,11 @@ public abstract class ServerMonster {
                 if (targetPos != null) {
                     float distSq = (x - targetPos[0]) * (x - targetPos[0]) + (y - targetPos[1]) * (y - targetPos[1]);
 
-                    if (currentAttackCooldown <= 0) {
+                    // 공격 범위 체크 추가
+                    float attackDistSq = attackRange * attackRange;
+
+                    if (currentAttackCooldown <= 0 && distSq <= attackDistSq) {
+                        // 공격 범위 안에 있고 쿨다운 완료 시 공격
                         if (!isCharging) {
                             // 충전 시작
                             isCharging = true;
@@ -333,14 +395,18 @@ public abstract class ServerMonster {
                             // 충전 중
                             chargingTime += delta;
                             if (chargingTime >= CHARGING_DURATION) {
-                                // 충전 완료
+                                // 충전 완료 - 즉시 추적으로 전환
                                 isCharging = false;
                                 chargingTime = 0;
                                 currentAttackCooldown = attackCooldown;
+                                currentState = "PURSUING";
+                                moveTowards(targetPos[0], targetPos[1]);
                             }
                         }
                     } else {
-                        // 추적
+                        // 공격 범위 밖이거나 쿨다운 중 - 추적
+                        isCharging = false;
+                        chargingTime = 0;
                         currentState = "PURSUING";
                         moveTowards(targetPos[0], targetPos[1]);
                     }

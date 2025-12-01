@@ -5,6 +5,7 @@ import com.example.yugeup.game.player.Player;
 import com.example.yugeup.game.skill.ElementType;
 import com.example.yugeup.game.skill.ElementalSkill;
 import com.example.yugeup.utils.Constants;
+
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -13,7 +14,8 @@ import java.util.List;
  * 체인 라이트닝 스킬 클래스
  *
  * 번개 원소의 두 번째 스킬입니다.
- * 적을 타격한 후 주변 적으로 연쇄합니다.
+ * 단순 직선 투사체 (연쇄 공격 제거됨).
+ * 작은 크기, 빠른 속도, 긴 사거리.
  *
  * @author YuGeup Development Team
  * @version 1.0
@@ -43,12 +45,10 @@ public class ChainLightning extends ElementalSkill {
      */
     @Override
     public void cast(Player caster, Vector2 targetPosition) {
-        // 쿨타임 확인
         if (!isReady()) {
             return;
         }
 
-        // 마나 확인 및 소모
         if (!caster.getStats().consumeMana(getManaCost())) {
             return;
         }
@@ -57,18 +57,17 @@ public class ChainLightning extends ElementalSkill {
         Vector2 casterPos = new Vector2(caster.getX(), caster.getY());
         Vector2 direction = targetPosition.cpy().sub(casterPos).nor();
 
-        // 체인 라이트닝 발사체 생성
+        // 체인 라이트닝 발사체 생성 (관통 스킬)
         ChainLightningProjectile projectile = new ChainLightningProjectile(
             casterPos,
             direction.x,
             direction.y,
             getDamage(),
-            260f  // 중간 속도
+            Constants.CHAIN_LIGHTNING_SPEED,
+            Constants.CHAIN_LIGHTNING_RANGE
         );
-
-        // 연쇄 공격 설정 (최대 4번 연쇄)
-        projectile.setMaxPierceCount(Constants.CHAIN_LIGHTNING_MAX_JUMPS);
-
+        // 무한 관통 (사거리 끝까지)
+        projectile.setMaxPierceCount(999);
         activeProjectiles.add(projectile);
 
         // 쿨타임 시작

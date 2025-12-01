@@ -251,8 +251,20 @@ public class WaitingRoomScreen implements Screen {
             System.out.println("[WaitingRoomScreen] 게임 시작 알림 수신! startTime: " + notification.startTime);
             System.out.println("[WaitingRoomScreen] GameScreen으로 전환합니다.");
 
-            // GameScreen으로 전환
-            game.setScreen(new GameScreen(game, roomInfo, players));
+            // notification.players 사용 (스폰 위치 포함)
+            java.util.List<PlayerInfo> playersWithSpawn = null;
+            if (notification.players != null) {
+                playersWithSpawn = java.util.Arrays.asList(notification.players);
+                System.out.println("[WaitingRoomScreen] 서버에서 받은 플레이어 스폰 정보:");
+                for (PlayerInfo p : playersWithSpawn) {
+                    System.out.println("  - " + p.playerName + " → (" + p.spawnX + ", " + p.spawnY + ")");
+                }
+            } else {
+                playersWithSpawn = players;  // fallback
+            }
+
+            // GameScreen으로 전환 (스폰 위치 포함된 players 사용)
+            game.setScreen(new GameScreen(game, roomInfo, playersWithSpawn));
             this.dispose();
 
             System.out.println("[WaitingRoomScreen] GameScreen 전환 완료!");

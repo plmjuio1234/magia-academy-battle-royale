@@ -74,6 +74,9 @@ public class Player {
     // 마나 재생 타이머
     private float manaRegenTimer = 0f;
 
+    // 체력 재생 타이머
+    private float hpRegenTimer = 0f;
+
     /**
      * Player 생성자
      */
@@ -160,6 +163,18 @@ public class Player {
                 System.out.println("[Player] 레벨업! Lv." + newLevel);
                 // 레벨업 시 스킬 배우기
                 self.handleLevelUpSkillLearning(newLevel);
+
+                // 레벨업 시 서버에 HP 동기화 (풀회복됨)
+                com.example.yugeup.network.NetworkManager networkManager =
+                    com.example.yugeup.network.NetworkManager.getInstance();
+                if (networkManager != null && networkManager.isConnected()) {
+                    networkManager.sendLevelUp(
+                        self.playerId,
+                        newLevel,
+                        self.stats.getMaxHealth(),
+                        self.stats.getCurrentHealth()
+                    );
+                }
             }
         });
     }
@@ -184,10 +199,16 @@ public class Player {
     /**
      * 데미지 받기 (PHASE_10)
      *
+     * 피해 감소 버프(스톤 실드 등)가 적용됩니다.
+     *
      * @param rawDamage 기본 데미지
      */
     public void takeDamage(int rawDamage) {
-        int actualDamage = stats.calculateDamageReceived(rawDamage);
+        // 피해 감소 버프 적용
+        float damageMultiplier = getDamageMultiplier();
+        int reducedDamage = (int) (rawDamage * damageMultiplier);
+
+        int actualDamage = stats.calculateDamageReceived(reducedDamage);
         stats.decreaseHealth(actualDamage);
         System.out.println("[Player] 데미지 받음: " + actualDamage + " (현재 HP: " + stats.getCurrentHealth() + "/" + stats.getMaxHealth() + ")");
     }
@@ -266,6 +287,7 @@ public class Player {
         // 마나 재생 (PHASE_19) - 로컬 플레이어만
         if (!isRemote) {
             updateManaRegeneration(delta);
+            updateHpRegeneration(delta);
         }
     }
 
@@ -296,6 +318,28 @@ public class Player {
             int regenAmount = (int) totalManaRegen;
             if (regenAmount > 0) {
                 stats.increaseMana(regenAmount);
+            }
+        }
+    }
+
+    /**
+     * 체력 재생을 업데이트합니다.
+     *
+     * @param delta 이전 프레임으로부터의 시간 (초)
+     */
+    private void updateHpRegeneration(float delta) {
+        // 기본 체력 재생: 2 HP/초
+        float baseHpRegen = 2.0f;
+
+        // 2초마다 체력 회복
+        hpRegenTimer += delta;
+        if (hpRegenTimer >= 2.0f) {
+            hpRegenTimer -= 2.0f;
+
+            // 체력 회복 (최대 체력 미만일 때만)
+            int regenAmount = (int) (baseHpRegen * 2);  // 2초치
+            if (regenAmount > 0 && stats.getCurrentHealth() < stats.getMaxHealth()) {
+                stats.increaseHealth(regenAmount);
             }
         }
     }
@@ -497,12 +541,20 @@ public class Player {
     /**
      * 원소 설정 (PHASE_13)
      *
+     * 원소 선택 시 현재 레벨에 맞는 스킬을 모두 배웁니다.
+     *
      * @param element 선택한 원소
      */
     public void setElement(ElementType element) {
         this.selectedElement = element;
         this.elementSkillSet = new ElementSkillSet(element, this);
         System.out.println("[Player] 원소 선택: " + element.getDisplayName());
+
+        // 현재 레벨까지의 모든 스킬 배우기
+        int currentLevel = levelSystem.getCurrentLevel();
+        for (int level = 1; level <= currentLevel; level++) {
+            handleLevelUpSkillLearning(level);
+        }
     }
 
     /**
@@ -596,6 +648,28 @@ public class Player {
             if (buff.getBuffType() == BuffType.SPEED && buff.isActive()) {
                 com.example.yugeup.game.buff.SpeedBuff speedBuff = (com.example.yugeup.game.buff.SpeedBuff) buff;
                 multiplier *= speedBuff.getSpeedMultiplier();
+            }
+        }
+
+        return multiplier;
+    }
+
+    /**
+     * 현재 적용된 피해 감소 배수를 계산합니다.
+     *
+     * 스톤 실드 등의 피해 감소 버프를 고려합니다.
+     *
+     * @return 피해 배수 (1.0 = 정상, 0.5 = 50% 감소)
+     */
+    public float getDamageMultiplier() {
+        float multiplier = 1.0f;
+
+        // 피해 감소 버프 적용
+        for (Buff buff : activeBuffs) {
+            if (buff.getBuffType() == BuffType.DAMAGE_REDUCTION && buff.isActive()) {
+                com.example.yugeup.game.buff.DamageReductionBuff drBuff =
+                    (com.example.yugeup.game.buff.DamageReductionBuff) buff;
+                multiplier *= drBuff.getDamageMultiplier();
             }
         }
 

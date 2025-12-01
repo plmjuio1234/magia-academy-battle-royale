@@ -75,13 +75,19 @@ public abstract class ElementalSkill extends Skill {
     }
 
     /**
-     * 최종 데미지 계산 (업그레이드 적용)
+     * 최종 데미지 계산 (업그레이드 + 공격력 스탯 적용)
      *
-     * @return 업그레이드가 적용된 데미지
+     * @return 업그레이드와 공격력이 적용된 데미지
      */
     public int getDamage() {
-        // 기본 데미지 * 배율 + 업그레이드 보너스
-        return (int) (baseDamage * damageMultiplier) + damageBonus;
+        // 공격력 스탯 보너스 (플레이어 공격력의 50%를 추가)
+        int attackPowerBonus = 0;
+        if (owner != null && owner.getStats() != null) {
+            attackPowerBonus = owner.getStats().getAttackPower() / 2;
+        }
+
+        // 기본 데미지 * 배율 + 업그레이드 보너스 + 공격력 보너스
+        return (int) (baseDamage * damageMultiplier) + damageBonus + attackPowerBonus;
     }
 
     /**

@@ -59,13 +59,14 @@ public class Fireball extends ElementalSkill {
         Vector2 casterPos = new Vector2(caster.getX(), caster.getY());
         Vector2 direction = targetPosition.cpy().sub(casterPos).nor();
 
-        // 발사체 생성
+        // 발사체 생성 (새 스펙: 속도 100, 사거리 300)
         FireballProjectile projectile = new FireballProjectile(
             casterPos,
             direction.x,
             direction.y,
             getDamage(),
-            220f  // 발사 속도
+            Constants.FIREBALL_SPEED,  // 100 픽셀/초
+            Constants.FIREBALL_RANGE   // 300 픽셀
         );
 
         activeProjectiles.add(projectile);
