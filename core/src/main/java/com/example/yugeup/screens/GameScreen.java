@@ -1530,6 +1530,24 @@ public class GameScreen implements Screen {
     hudCam.update();
 
     batch.setProjectionMatrix(hudCam.combined);
+
+    // 1. ShapeRenderer로 반투명 검은색 배경을 먼저 그립니다.
+    Gdx.gl.glEnable(GL20.GL_BLEND); // 반투명 효과를 위해 블렌딩 활성화
+    Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+    shapeRenderer.setProjectionMatrix(hudCam.combined); // HUD 카메라 사용
+    shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+    shapeRenderer.setColor(0, 0, 0, 0.4f); // 반투명 검은색 (RGBA)
+
+    // 배경 사각형 그리기 (텍스트보다 약간 크게)
+    float bgWidth = 320f;
+    float bgHeight = 60f;
+    float bgX = Constants.SCREEN_WIDTH - bgWidth - 50f;
+    float bgY = Constants.SCREEN_HEIGHT - bgHeight - 70f;
+    shapeRenderer.rect(bgX, bgY, bgWidth, bgHeight);
+
+    shapeRenderer.end();
+    Gdx.gl.glDisable(GL20.GL_BLEND); // 블렌딩 비활성화
+
     batch.begin();
 
     // 우상단: 남은 인원
@@ -1537,7 +1555,13 @@ public class GameScreen implements Screen {
     font.setColor(Color.WHITE);
     font.getData().setScale(1.0f);
     String survivorText = "남은 인원: " + alivePlayers + "명";
-    font.draw(batch, survivorText, Constants.SCREEN_WIDTH - 250, Constants.SCREEN_HEIGHT - 40);
+
+    // GlyphLayout으로 텍스트 중앙 정렬 (배경 기준)
+    com.badlogic.gdx.graphics.g2d.GlyphLayout layout = new com.badlogic.gdx.graphics.g2d.GlyphLayout(font, survivorText);
+    float textX = bgX + (bgWidth - layout.width) / 2f;
+    float textY = bgY + (bgHeight + layout.height) / 2f;
+
+    font.draw(batch, survivorText, textX, textY);
 
     batch.end();
 

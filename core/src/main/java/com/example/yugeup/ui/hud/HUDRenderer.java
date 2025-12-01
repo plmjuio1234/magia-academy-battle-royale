@@ -129,8 +129,8 @@ public class HUDRenderer {
      */
     private void initializeSkillButtons() {
         // 스킬 버튼들을 화면 우측 하단에 배치 (원형, 더 큰 크기)
-        float skillButtonRadius = 60f;  // 반경 60 (지름 120)
-        float skillButtonSpacing = 140f;  // 간격
+        float skillButtonRadius = 100f;  // 반경 60 (지름 120)
+        float skillButtonSpacing = 200f;  // 간격
 
         // HUD 카메라의 실제 viewport 크기 사용 (Constants 대신)
         float viewportWidth = hudCamera.viewportWidth;
@@ -141,7 +141,7 @@ public class HUDRenderer {
 
         // 우측 정렬: viewport 너비 기준으로 우측에서 왼쪽으로 배치
         float startX = viewportWidth - skillButtonSpacing * 3 - 30f;
-        float startY = 80f;  // Y좌표: 하단에서 80 위로
+        float startY = 300f;  // Y좌표: 하단에서 80 위로
 
         ElementSkillSet skillSet = player.getElementSkillSet();
         if (skillSet != null) {
@@ -152,7 +152,7 @@ public class HUDRenderer {
                 ElementalSkill skill = skillSet.getSkill(i);
                 if (skill != null) {
                     float buttonX = startX + i * skillButtonSpacing;
-                    float buttonY = startY;
+                    float buttonY = startY - i * skillButtonSpacing;
 
                     // 배운 스킬인지 확인
                     boolean isLearned = player.hasLearnedSkill(skill.getSkillId());
@@ -207,9 +207,9 @@ public class HUDRenderer {
         float startX = viewportWidth - skillButtonSpacing * 3 - 30f;
 
         // 매직미사일 버튼은 스킬 A 왼쪽 위에 배치
-        float mmButtonX = startX - 150f;  // 스킬 A 왼쪽에서 더 멀리
-        float mmButtonY = 200f;  // 스킬 버튼보다 위에 (80 → 200)
-        float mmButtonRadius = 60f;  // 반경 60 (스킬 버튼과 동일)
+        float mmButtonX = viewportWidth - 350f;  // 스킬 A 왼쪽에서 더 멀리
+        float mmButtonY = 300f;  // 스킬 버튼보다 위에 (80 → 200)
+        float mmButtonRadius = 120f;  // 반경 60 (스킬 버튼과 동일)
 
         // 아이콘 및 ShapeRenderer 전달
         magicMissileButton = new MagicMissileButton(
@@ -226,16 +226,17 @@ public class HUDRenderer {
             return;
         }
 
-        float skillButtonSpacing = 140f;
+        float skillButtonSpacing = 180f;
         float viewportWidth = hudCamera.viewportWidth;
-        float startX = viewportWidth - skillButtonSpacing * 3 - 30f;
-        float startY = 80f;
+        float startX = viewportWidth - skillButtonSpacing * 3 - 180f;
+        float startY = 320f;
 
         System.out.println("[HUDRenderer] 스킬 버튼 위치 재조정: viewport=" + viewportWidth);
 
         for (int i = 0; i < skillButtons.size(); i++) {
             float buttonX = startX + i * skillButtonSpacing;
-            skillButtons.get(i).setPosition(buttonX, startY);
+            float buttonY = startY + i * skillButtonSpacing;
+            skillButtons.get(i).setPosition(buttonX, buttonY);
             System.out.println("[HUDRenderer] 버튼 " + i + " 위치 업데이트: (" + buttonX + ", " + startY + ")");
         }
     }
