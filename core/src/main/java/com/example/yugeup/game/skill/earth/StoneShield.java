@@ -4,8 +4,7 @@ import com.badlogic.gdx.math.Vector2;
 import com.example.yugeup.game.player.Player;
 import com.example.yugeup.game.skill.ElementType;
 import com.example.yugeup.game.skill.ElementalSkill;
-import com.example.yugeup.game.buff.DefenseBuff;
-import com.example.yugeup.game.buff.RegenBuff;
+import com.example.yugeup.game.buff.DamageReductionBuff;
 import com.example.yugeup.utils.Constants;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -15,7 +14,8 @@ import java.util.List;
  * 스톤 실드 스킬 클래스
  *
  * 땅 원소의 세 번째 스킬입니다.
- * 방어력을 증가시키고 체력을 회복합니다.
+ * 8초 동안 피해를 50% 덜 받습니다.
+ * start 애니메이션 후 7초간 loop 애니메이션
  *
  * @author YuGeup Development Team
  * @version 1.0
@@ -53,16 +53,10 @@ public class StoneShield extends ElementalSkill {
             return;
         }
 
-        // 방어력 버프 적용
-        caster.addBuff(new DefenseBuff(
+        // 피해 감소 버프 적용 (50% 감소)
+        caster.addBuff(new DamageReductionBuff(
             Constants.STONE_SHIELD_DURATION,
-            Constants.STONE_SHIELD_DEF_BONUS
-        ));
-
-        // 재생 버프 적용
-        caster.addBuff(new RegenBuff(
-            Constants.STONE_SHIELD_DURATION,
-            Constants.STONE_SHIELD_HP_PER_SECOND
+            Constants.STONE_SHIELD_DAMAGE_REDUCTION
         ));
 
         // 시각 이펙트 존 생성
@@ -78,7 +72,7 @@ public class StoneShield extends ElementalSkill {
         // 네트워크 동기화
         sendSkillCastToNetwork(targetPosition);
 
-        System.out.println("[StoneShield] 스톤 실드 시전!");
+        System.out.println("[StoneShield] 스톤 실드 시전! 8초간 피해 50% 감소");
     }
 
     /**

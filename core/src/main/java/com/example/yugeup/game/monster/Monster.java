@@ -146,9 +146,12 @@ public class Monster {
             animation.update(delta);
         }
 
-        // HP 바 위치 업데이트
+        // HP 바 위치 업데이트 (몬스터 중앙에 정렬)
         if (hpBar != null) {
-            hpBar.setPosition(x, y + height + 5);
+            // HP 바 너비는 32f, 몬스터 중앙에 오도록 계산
+            float hpBarWidth = 32f;
+            float centeredX = x + (width - hpBarWidth) / 2;
+            hpBar.setPosition(centeredX, y + height + 5);
         }
     }
 
@@ -175,9 +178,9 @@ public class Monster {
             return;
         }
 
-        // 보간 속도: 서버 최대 속도의 1.2배 (Ghost: 120 픽셀/초)
+        // 보간 속도: 서버 최대 속도의 1.5배 (Ghost: 120 픽셀/초 → 180)
         // 서버가 0.1초마다 위치 전송하므로 빠르게 따라가야 함
-        float interpolationSpeed = 50f;  // 초당 50배 보간 (순간이동 방지)
+        float interpolationSpeed = 180f;  // 증가된 보간 속도
         float lerpAmount = Math.min(1f, interpolationSpeed * delta);
 
         // 선형 보간으로 부드럽게 이동

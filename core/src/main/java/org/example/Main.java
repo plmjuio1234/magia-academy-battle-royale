@@ -65,6 +65,8 @@ public class Main {
         public int playerId;
         public String playerName;
         public boolean isHost;
+        public float spawnX;  // 스폰 X 좌표
+        public float spawnY;  // 스폰 Y 좌표
 
         public PlayerInfo() {}
     }

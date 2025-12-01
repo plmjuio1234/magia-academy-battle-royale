@@ -208,19 +208,49 @@ public class MonsterAnimation {
      * @return 현재 프레임
      */
     public TextureRegion getCurrentFrame(MonsterState state, int direction) {
-        // MOVING 상태일 때만 방향별 애니메이션 사용
-        if (state == MonsterState.MOVING && atlas != null) {
-            String typePrefix = type.name().toLowerCase();
-            String directionSuffix = (direction == 0) ? "left" : "right";
+        if (atlas == null) {
+            return createDefaultFrame();
+        }
+
+        String typePrefix = type.name().toLowerCase();
+        String directionSuffix = (direction == 0) ? "left" : "right";
+
+        // MOVING 상태: 방향별 이동 애니메이션
+        if (state == MonsterState.MOVING) {
             String frameName = typePrefix + "-move_" + directionSuffix + "-0";
 
             // 해당 방향 프레임이 있는지 확인
             if (atlas.findRegion(frameName) != null) {
-                // 방향별 애니메이션 생성 (캐싱 없이 즉석 생성)
                 Animation<TextureRegion> dirAnimation = createAnimation(
                     typePrefix + "-move_" + directionSuffix + "-", 4, 0.15f);
                 if (dirAnimation != null) {
                     return dirAnimation.getKeyFrame(stateTime, true);
+                }
+            }
+        }
+
+        // ATTACKING 상태: 방향별 공격 애니메이션 (골렘용)
+        if (state == MonsterState.ATTACKING && type == MonsterType.GOLEM) {
+            String frameName = typePrefix + "-attack_" + directionSuffix + "-0";
+
+            // 해당 방향 공격 프레임이 있는지 확인
+            if (atlas.findRegion(frameName) != null) {
+                Animation<TextureRegion> attackAnimation = createAnimation(
+                    typePrefix + "-attack_" + directionSuffix + "-", 5, 0.1f);
+                if (attackAnimation != null) {
+                    return attackAnimation.getKeyFrame(stateTime, false);
+                }
+            }
+        }
+
+        // IDLE 상태: 방향별 idle 애니메이션 (있으면) 또는 move 재사용
+        if (state == MonsterState.IDLE) {
+            // 골렘은 front가 없으므로 현재 방향의 move 첫 프레임 사용
+            if (type == MonsterType.GOLEM) {
+                String frameName = typePrefix + "-move_" + directionSuffix + "-0";
+                TextureRegion frame = atlas.findRegion(frameName);
+                if (frame != null) {
+                    return frame;
                 }
             }
         }

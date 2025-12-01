@@ -22,6 +22,10 @@ public class SkillDirectionIndicator {
     private static final float ARROW_HEAD_SIZE = 20f;  // 화살표 머리 크기
     private static final float ARROW_WIDTH = 4f;  // 화살표 선 두께
 
+    // 범위 표시 모드 (인페르노 등 광역 스킬용)
+    private boolean isRangeMode;
+    private float rangeRadius;
+
     /**
      * 생성자
      */
@@ -29,6 +33,8 @@ public class SkillDirectionIndicator {
         this.playerPosition = new Vector2();
         this.targetPosition = new Vector2();
         this.isActive = false;
+        this.isRangeMode = false;
+        this.rangeRadius = 0f;
     }
 
     /**
@@ -41,6 +47,23 @@ public class SkillDirectionIndicator {
         this.playerPosition.set(playerX, playerY);
         this.targetPosition.set(playerX, playerY);
         this.isActive = true;
+        this.isRangeMode = false;
+        this.rangeRadius = 0f;
+    }
+
+    /**
+     * 범위 표시 모드로 활성화 (광역 스킬용)
+     *
+     * @param playerX 플레이어 X 좌표
+     * @param playerY 플레이어 Y 좌표
+     * @param radius 범위 반경
+     */
+    public void activateRangeMode(float playerX, float playerY, float radius) {
+        this.playerPosition.set(playerX, playerY);
+        this.targetPosition.set(playerX, playerY);
+        this.isActive = true;
+        this.isRangeMode = true;
+        this.rangeRadius = radius;
     }
 
     /**
@@ -70,6 +93,12 @@ public class SkillDirectionIndicator {
             return;
         }
 
+        // 범위 표시 모드일 경우 원 그리기
+        if (isRangeMode) {
+            renderRangeCircle(shapeRenderer);
+            return;
+        }
+
         // 방향 벡터 계산
         Vector2 direction = targetPosition.cpy().sub(playerPosition);
         if (direction.len() < 10f) {
@@ -93,6 +122,32 @@ public class SkillDirectionIndicator {
         drawArrowHead(shapeRenderer, arrowEnd, direction);
 
         shapeRenderer.end();
+    }
+
+    /**
+     * 범위 원 렌더링 (광역 스킬용)
+     *
+     * @param shapeRenderer ShapeRenderer
+     */
+    private void renderRangeCircle(ShapeRenderer shapeRenderer) {
+        // 블렌딩 활성화 (투명도 적용)
+        com.badlogic.gdx.Gdx.gl.glEnable(com.badlogic.gdx.graphics.GL20.GL_BLEND);
+        com.badlogic.gdx.Gdx.gl.glBlendFunc(com.badlogic.gdx.graphics.GL20.GL_SRC_ALPHA, com.badlogic.gdx.graphics.GL20.GL_ONE_MINUS_SRC_ALPHA);
+
+        // 반투명 원 내부
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        shapeRenderer.setColor(1f, 0.5f, 0f, 0.2f);  // 반투명 주황색
+        shapeRenderer.circle(playerPosition.x, playerPosition.y, rangeRadius, 48);
+        shapeRenderer.end();
+
+        // 원 테두리
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+        shapeRenderer.setColor(1f, 0.6f, 0f, 0.8f);  // 주황색 테두리
+        shapeRenderer.circle(playerPosition.x, playerPosition.y, rangeRadius, 48);
+        shapeRenderer.end();
+
+        // 블렌딩 비활성화
+        com.badlogic.gdx.Gdx.gl.glDisable(com.badlogic.gdx.graphics.GL20.GL_BLEND);
     }
 
     /**

@@ -1,18 +1,210 @@
 package com.example.yugeup.game.skill.earth;
 
-import com.example.yugeup.game.skill.SkillZone;
+import com.badlogic.gdx.graphics.g2d.Animation;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.math.Vector2;
+import com.example.yugeup.game.monster.Monster;
+import com.example.yugeup.game.skill.SkillEffectManager;
+import com.example.yugeup.network.NetworkManager;
 import com.example.yugeup.utils.Constants;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
-public class EarthSpikeZone extends SkillZone {
-    public EarthSpikeZone(float x, float y, int damagePerTick) {
-        super(x, y, Constants.EARTH_SPIKE_RADIUS, 0.5f, damagePerTick, "earth_spike");  // 애니메이션 이름 전달
+/**
+ * 어스 스파이크 지역 클래스 (이동형)
+ *
+ * 보는 방향으로 진행하는 바닥 가시입니다.
+ * 사거리 200, 속도 100, 히트박스 24x16
+ * 애니메이션이 끝나면 바로 사라짐
+ * 각도 고정
+ *
+ * @author YuGeup Development Team
+ * @version 1.0
+ */
+public class EarthSpikeZone {
+
+    // 위치 및 속도
+    private Vector2 position;
+    private Vector2 startPosition;
+    private Vector2 velocity;
+
+    // 데미지
+    private int damage;
+
+    // 이동 거리 제한
+    private float maxRange;
+    private float traveledDistance = 0f;
+
+    // 활성 상태
+    private boolean isActive;
+
+    // 렌더링 크기
+    private float renderWidth;
+    private float renderHeight;
+
+    // 애니메이션
+    private Animation<TextureRegion> animation;
+    private float animationTime = 0f;
+
+    // 몬스터 리스트 (충돌 감지용)
+    private List<Monster> monsterList;
+
+    // 이미 맞은 몬스터 (관통 데미지)
+    private Set<Integer> hitMonsters;
+
+    /**
+     * 어스 스파이크 지역 생성자
+     *
+     * @param origin 시작 위치
+     * @param directionX 방향 X
+     * @param directionY 방향 Y
+     * @param damage 데미지
+     */
+    public EarthSpikeZone(Vector2 origin, float directionX, float directionY, int damage) {
+        this.position = new Vector2(origin);
+        this.startPosition = new Vector2(origin);
+        this.damage = damage;
+        this.maxRange = Constants.EARTH_SPIKE_RANGE;
+        this.isActive = true;
+        this.hitMonsters = new HashSet<>();
+
+        // 속도 벡터 설정
+        float speed = Constants.EARTH_SPIKE_SPEED;
+        this.velocity = new Vector2(directionX * speed, directionY * speed);
+
+        // 히트박스 24x16에 스케일 적용
+        this.renderWidth = Constants.EARTH_SPIKE_HITBOX_WIDTH * Constants.EARTH_SPIKE_SCALE;
+        this.renderHeight = Constants.EARTH_SPIKE_HITBOX_HEIGHT * Constants.EARTH_SPIKE_SCALE;
+
+        // 애니메이션 로드
+        this.animation = SkillEffectManager.getInstance().getAnimation("earth_spike");
+
+        System.out.println("[EarthSpikeZone] 생성! 방향: (" + directionX + ", " + directionY + ")");
     }
 
-    @Override
-    public void applyDamageToNearbyMonsters() {
-        super.applyDamageToNearbyMonsters();  // 부모 클래스 구현 사용
+    /**
+     * 몬스터 목록 설정
+     *
+     * @param monsters 몬스터 목록
+     */
+    public void setMonsterList(List<Monster> monsters) {
+        this.monsterList = monsters;
     }
 
-    @Override
-    protected void onEnd() {}
+    /**
+     * 업데이트
+     *
+     * @param delta 델타 타임
+     */
+    public void update(float delta) {
+        if (!isActive) return;
+
+        animationTime += delta;
+
+        // 위치 업데이트
+        position.add(velocity.x * delta, velocity.y * delta);
+
+        // 사거리 체크
+        traveledDistance = position.dst(startPosition);
+        if (traveledDistance >= maxRange) {
+            isActive = false;
+            System.out.println("[EarthSpikeZone] 사거리 도달, 종료!");
+            return;
+        }
+
+        // 애니메이션 종료 체크
+        if (animation != null && animation.isAnimationFinished(animationTime)) {
+            isActive = false;
+            System.out.println("[EarthSpikeZone] 애니메이션 종료!");
+            return;
+        }
+
+        // 충돌 감지
+        checkCollision();
+    }
+
+    /**
+     * 충돌 감지 (관통)
+     */
+    private void checkCollision() {
+        if (monsterList == null || monsterList.isEmpty()) return;
+
+        NetworkManager nm = NetworkManager.getInstance();
+        float hitboxHalfWidth = Constants.EARTH_SPIKE_HITBOX_WIDTH / 2f;
+        float hitboxHalfHeight = Constants.EARTH_SPIKE_HITBOX_HEIGHT / 2f;
+
+        for (Monster monster : monsterList) {
+            if (monster == null || monster.isDead()) continue;
+            if (hitMonsters.contains(monster.getMonsterId())) continue;
+
+            // 거리 계산 (AABB 대신 원형 충돌)
+            float dx = monster.getX() - position.x;
+            float dy = monster.getY() - position.y;
+            float distance = (float) Math.sqrt(dx * dx + dy * dy);
+
+            // 충돌 판정
+            if (distance <= hitboxHalfWidth + 20f) {
+                // 서버로 공격 메시지 전송
+                if (nm != null) {
+                    nm.sendAttackMessage(monster.getMonsterId(), damage, position.x, position.y);
+                }
+                hitMonsters.add(monster.getMonsterId());
+                System.out.println("[EarthSpike] 충돌! 몬스터 " + monster.getMonsterId() + " 데미지: " + damage);
+            }
+        }
+    }
+
+    /**
+     * 렌더링 (각도 고정)
+     *
+     * @param batch SpriteBatch
+     */
+    public void render(SpriteBatch batch) {
+        if (!isActive || animation == null) return;
+
+        TextureRegion frame = animation.getKeyFrame(animationTime, true);
+        // 각도 고정 (회전하지 않음)
+        batch.draw(frame,
+            position.x - renderWidth / 2,
+            position.y - renderHeight / 2,
+            renderWidth, renderHeight);
+    }
+
+    /**
+     * 활성 상태 확인
+     *
+     * @return 활성 여부
+     */
+    public boolean isActive() {
+        return isActive;
+    }
+
+    /**
+     * 위치 반환
+     *
+     * @return 현재 위치
+     */
+    public Vector2 getPosition() {
+        return position;
+    }
+
+    /**
+     * 렌더링 너비 반환
+     *
+     * @return 렌더링 너비
+     */
+    public float getRenderWidth() {
+        return renderWidth;
+    }
+
+    /**
+     * 렌더링 높이 반환
+     *
+     * @return 렌더링 높이
+     */
+    public float getRenderHeight() {
+        return renderHeight;
+    }
 }

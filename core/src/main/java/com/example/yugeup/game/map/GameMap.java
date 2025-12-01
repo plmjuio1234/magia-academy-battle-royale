@@ -32,8 +32,8 @@ public class GameMap {
     private int mapWidthInTiles;
     private int mapHeightInTiles;
 
-    // 자기장 (나중에 구현 - PHASE_24)
-    // private ZoneManager zoneManager;
+    // fog 그룹 레이어 (PHASE_24)
+    private MapGroupLayer fogGroupLayer;
 
     /**
      * GameMap 생성자
@@ -81,6 +81,21 @@ public class GameMap {
                 System.out.print(tiledMap.getLayers().get(i).getName() + " ");
             }
             System.out.println();
+
+            // fog 그룹 레이어 찾기 (PHASE_24)
+            MapLayer fogLayer = tiledMap.getLayers().get("fog");
+            if (fogLayer instanceof MapGroupLayer) {
+                fogGroupLayer = (MapGroupLayer) fogLayer;
+                System.out.println("[GameMap] fog 그룹 레이어 발견 - 자식 레이어 수: " + fogGroupLayer.getLayers().getCount());
+
+                // 모든 fog 레이어를 비활성화 상태로 초기화
+                for (MapLayer childLayer : fogGroupLayer.getLayers()) {
+                    childLayer.setVisible(false);
+                    System.out.println("[GameMap] fog 레이어 비활성화: " + childLayer.getName());
+                }
+            } else {
+                System.out.println("[GameMap] 경고: fog 그룹 레이어를 찾을 수 없음");
+            }
 
         } catch (Exception e) {
             System.err.println("[GameMap] 오류: TMX 파일 로드 실패 - " + e.getMessage());
@@ -232,6 +247,91 @@ public class GameMap {
                isWall(centerX + radius, centerY) ||  // 오른쪽
                isWall(centerX, centerY - radius) ||  // 아래
                isWall(centerX, centerY + radius);    // 위
+    }
+
+    // ===== Fog 시스템 (PHASE_24) =====
+
+    /**
+     * 특정 fog 레이어를 활성화합니다.
+     *
+     * @param zoneName 구역 이름 (TMX 레이어명)
+     */
+    public void activateFogLayer(String zoneName) {
+        if (fogGroupLayer == null) {
+            System.out.println("[GameMap] fog 그룹 레이어가 없습니다.");
+            return;
+        }
+
+        MapLayer layer = fogGroupLayer.getLayers().get(zoneName);
+        if (layer != null) {
+            layer.setVisible(true);
+            System.out.println("[GameMap] ★ fog 레이어 활성화: " + zoneName);
+        } else {
+            System.out.println("[GameMap] fog 레이어를 찾을 수 없음: " + zoneName);
+        }
+    }
+
+    /**
+     * 특정 fog 레이어를 비활성화합니다.
+     *
+     * @param zoneName 구역 이름 (TMX 레이어명)
+     */
+    public void deactivateFogLayer(String zoneName) {
+        if (fogGroupLayer == null) {
+            return;
+        }
+
+        MapLayer layer = fogGroupLayer.getLayers().get(zoneName);
+        if (layer != null) {
+            layer.setVisible(false);
+            System.out.println("[GameMap] fog 레이어 비활성화: " + zoneName);
+        }
+    }
+
+    /**
+     * 특정 좌표가 활성화된 fog 구역 내에 있는지 확인합니다.
+     *
+     * @param x X 좌표 (픽셀)
+     * @param y Y 좌표 (픽셀)
+     * @return fog 구역 내에 있으면 해당 구역 이름, 아니면 null
+     */
+    public String isInActiveFog(float x, float y) {
+        if (fogGroupLayer == null || tiledMap == null) {
+            return null;
+        }
+
+        // 픽셀 좌표를 타일 좌표로 변환
+        int tileX = (int)(x / tileWidth);
+        int tileY = (int)(y / tileHeight);
+
+        // 각 fog 레이어 확인
+        for (MapLayer layer : fogGroupLayer.getLayers()) {
+            // 비활성화된 레이어는 건너뜀
+            if (!layer.isVisible()) {
+                continue;
+            }
+
+            // TiledMapTileLayer인 경우 타일 확인
+            if (layer instanceof TiledMapTileLayer) {
+                TiledMapTileLayer tileLayer = (TiledMapTileLayer) layer;
+                TiledMapTileLayer.Cell cell = tileLayer.getCell(tileX, tileY);
+
+                if (cell != null && cell.getTile() != null) {
+                    return layer.getName(); // fog 구역 이름 반환
+                }
+            }
+        }
+
+        return null; // fog 구역에 없음
+    }
+
+    /**
+     * fog 그룹 레이어가 있는지 확인합니다.
+     *
+     * @return fog 레이어 존재 여부
+     */
+    public boolean hasFogLayer() {
+        return fogGroupLayer != null;
     }
 
     // ===== Getter =====

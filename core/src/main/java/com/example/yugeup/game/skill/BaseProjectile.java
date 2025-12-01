@@ -7,8 +7,11 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
 import com.example.yugeup.game.monster.Monster;
+import com.example.yugeup.game.player.Player;
 import com.example.yugeup.network.NetworkManager;
+import com.example.yugeup.utils.Constants;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -49,7 +52,7 @@ public abstract class BaseProjectile {
 
     // 렌더링
     protected Texture texture;
-    protected float size = 48f;  // 발사체 크기 (16 → 48, 3배 증가)
+    protected float size = 24f;  // 기본 발사체 크기 (각 스킬에서 오버라이드)
     protected static final float COLLISION_RADIUS = 20f;  // 충돌 반경
     protected float red = 0.5f;    // 기본 색상: 파란색
     protected float green = 0.5f;
@@ -64,6 +67,10 @@ public abstract class BaseProjectile {
     // 피격판정용 (PHASE_24)
     protected List<Monster> monsterList;
     protected NetworkManager networkManager;
+
+    // PVP 지원 (플레이어 타겟팅)
+    protected List<Player> playerList;
+    protected int ownerPlayerId = -1;  // 발사체 소유자 ID (자기 자신 제외용)
 
     /**
      * 발사체 생성자 (유도 미사일)
@@ -209,53 +216,111 @@ public abstract class BaseProjectile {
     }
 
     /**
-     * 충돌 감지 (서버 동기화)
+     * 플레이어 목록 주입 메서드 (PVP 타겟팅용)
+     *
+     * @param players 플레이어 목록
+     */
+    public void setPlayerList(Collection<Player> players) {
+        this.playerList = new ArrayList<>(players);
+    }
+
+    /**
+     * 발사체 소유자 ID 설정 (자기 자신 제외용)
+     *
+     * @param id 소유자 플레이어 ID
+     */
+    public void setOwnerPlayerId(int id) {
+        this.ownerPlayerId = id;
+    }
+
+    /**
+     * 충돌 감지 (서버 동기화, PVP 지원)
      */
     protected void checkCollision() {
+        // 각 투사체의 size를 충돌 반경으로 사용 (렌더링과 일치)
+        float collisionRadius = size / 2;
+
+        // 몬스터 충돌 검사
         if (monsterList == null) {
             System.out.println("[BaseProjectile] checkCollision: monsterList is null!");
-            return;
-        }
-
-        if (monsterList.isEmpty()) {
+        } else if (monsterList.isEmpty()) {
             System.out.println("[BaseProjectile] checkCollision: monsterList is empty!");
-            return;
+        } else {
+            for (Monster monster : monsterList) {
+                if (monster == null || monster.isDead()) continue;
+                if (hitMonsterIds.contains(monster.getMonsterId())) continue;
+
+                // 거리 계산
+                float dx = monster.getX() - position.x;
+                float dy = monster.getY() - position.y;
+                float distance = (float) Math.sqrt(dx * dx + dy * dy);
+
+                // 충돌 판정
+                if (distance <= collisionRadius) {
+                    System.out.println("[BaseProjectile] 충돌 감지! 몬스터 ID=" + monster.getMonsterId() +
+                        ", 거리=" + distance + ", 데미지=" + damage);
+
+                    // 서버로 공격 메시지 전송
+                    if (networkManager == null) {
+                        networkManager = NetworkManager.getInstance();
+                    }
+                    if (networkManager != null) {
+                        networkManager.sendAttackMessage(
+                            monster.getMonsterId(),
+                            damage,
+                            position.x,
+                            position.y);
+                        System.out.println("[BaseProjectile] 서버로 공격 메시지 전송 완료");
+                    } else {
+                        System.out.println("[BaseProjectile] ERROR: NetworkManager is null!");
+                    }
+
+                    // 관통 처리
+                    hitMonsterIds.add(monster.getMonsterId());
+                    currentPierceCount++;
+
+                    if (currentPierceCount >= maxPierceCount) {
+                        isAlive = false;
+                        break;
+                    }
+                }
+            }
         }
 
-        for (Monster monster : monsterList) {
-            if (monster == null || monster.isDead()) continue;
-            if (hitMonsterIds.contains(monster.getMonsterId())) continue;
+        // 플레이어 충돌 검사 (PVP)
+        if (playerList != null && !playerList.isEmpty()) {
+            for (Player player : playerList) {
+                if (player == null || player.isDead()) continue;
+                if (player.getPlayerId() == ownerPlayerId) continue;  // 자기 자신 제외
 
-            // 거리 계산
-            float dx = monster.getX() - position.x;
-            float dy = monster.getY() - position.y;
-            float distance = (float) Math.sqrt(dx * dx + dy * dy);
+                // 거리 계산
+                float dx = player.getX() - position.x;
+                float dy = player.getY() - position.y;
+                float distance = (float) Math.sqrt(dx * dx + dy * dy);
 
-            // 충돌 판정
-            if (distance <= COLLISION_RADIUS) {
-                System.out.println("[BaseProjectile] 충돌 감지! 몬스터 ID=" + monster.getMonsterId() +
-                    ", 거리=" + distance + ", 데미지=" + damage);
+                // 충돌 판정
+                if (distance <= collisionRadius) {
+                    // PVP 데미지 계산 (0.5배)
+                    int pvpDamage = (int) (damage * Constants.PVP_DAMAGE_MULTIPLIER);
 
-                // 서버로 공격 메시지 전송
-                if (networkManager == null) {
-                    networkManager = NetworkManager.getInstance();
-                }
-                if (networkManager != null) {
-                    networkManager.sendAttackMessage(
-                        monster.getMonsterId(),
-                        damage,
-                        position.x,
-                        position.y);
-                    System.out.println("[BaseProjectile] 서버로 공격 메시지 전송 완료");
-                } else {
-                    System.out.println("[BaseProjectile] ERROR: NetworkManager is null!");
-                }
+                    System.out.println("[BaseProjectile] PVP 충돌 감지! 플레이어 ID=" + player.getPlayerId() +
+                        ", 거리=" + distance + ", 데미지=" + pvpDamage);
 
-                // 관통 처리
-                hitMonsterIds.add(monster.getMonsterId());
-                currentPierceCount++;
+                    // 서버로 PVP 공격 메시지 전송
+                    if (networkManager == null) {
+                        networkManager = NetworkManager.getInstance();
+                    }
+                    if (networkManager != null) {
+                        networkManager.sendPvpAttack(
+                            player.getPlayerId(),
+                            pvpDamage,
+                            "projectile");
+                        System.out.println("[BaseProjectile] 서버로 PVP 공격 메시지 전송 완료");
+                    } else {
+                        System.out.println("[BaseProjectile] ERROR: NetworkManager is null!");
+                    }
 
-                if (currentPierceCount >= maxPierceCount) {
+                    // 발사체 소멸 (PVP는 관통 없음)
                     isAlive = false;
                     break;
                 }

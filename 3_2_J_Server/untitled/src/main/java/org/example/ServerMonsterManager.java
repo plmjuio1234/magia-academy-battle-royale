@@ -21,9 +21,14 @@ public class ServerMonsterManager {
     // 콜백: 메시지를 방의 모든 플레이어에게 전송
     public interface MessageCallback {
         void broadcast(int roomId, Object message);
+        void sendToPlayer(int playerId, Object message);  // 특정 플레이어에게 전송
     }
 
     private MessageCallback messageCallback;
+
+    // 플레이어 HP 관리 (roomId -> (playerId -> HP))
+    private Map<Integer, Map<Integer, Integer>> roomPlayerHp = new HashMap<>();
+    private static final int PLAYER_MAX_HP = 100;
 
     // NEW : 생성자에 CollisionMap 매개변수 추가
     public ServerMonsterManager(MessageCallback callback, CollisionMap collisionMap) {
@@ -53,7 +58,40 @@ public class ServerMonsterManager {
     public void initializeRoom(int roomId) {
         roomMonsters.put(roomId, new ArrayList<>());
         roomSpawnTimers.put(roomId, 0.0f);  // 각 방의 스폰 타이머 초기화
+        roomPlayerHp.put(roomId, new HashMap<>());  // 플레이어 HP 맵 초기화
         System.out.println("[ServerMonsterManager] 룸 " + roomId + " 몬스터 시스템 초기화됨");
+    }
+
+    /**
+     * 플레이어 HP 초기화 (게임 시작 시)
+     */
+    public void initializePlayerHp(int roomId, int playerId) {
+        Map<Integer, Integer> hpMap = roomPlayerHp.get(roomId);
+        if (hpMap != null) {
+            hpMap.put(playerId, PLAYER_MAX_HP);
+            System.out.println("[ServerMonsterManager] 플레이어 " + playerId + " HP 초기화: " + PLAYER_MAX_HP);
+        }
+    }
+
+    /**
+     * 플레이어 HP 가져오기
+     */
+    public int getPlayerHp(int roomId, int playerId) {
+        Map<Integer, Integer> hpMap = roomPlayerHp.get(roomId);
+        if (hpMap != null && hpMap.containsKey(playerId)) {
+            return hpMap.get(playerId);
+        }
+        return PLAYER_MAX_HP;
+    }
+
+    /**
+     * 플레이어 HP 설정
+     */
+    public void setPlayerHp(int roomId, int playerId, int hp) {
+        Map<Integer, Integer> hpMap = roomPlayerHp.get(roomId);
+        if (hpMap != null) {
+            hpMap.put(playerId, Math.max(0, Math.min(hp, PLAYER_MAX_HP)));
+        }
     }
 
     /**
@@ -62,6 +100,7 @@ public class ServerMonsterManager {
     public void cleanupRoom(int roomId) {
         roomMonsters.remove(roomId);
         roomSpawnTimers.remove(roomId);
+        roomPlayerHp.remove(roomId);
     }
 
     /**
@@ -108,6 +147,36 @@ public class ServerMonsterManager {
             ServerMonster monster = iterator.next();
             monster.update(delta, activePlayers, playerPositions, this);  // NEW : this(ServerMonsterManager) 전달
 
+            // ===== 몬스터 → 플레이어 공격 처리 (PHASE_25) =====
+            if (monster.canAttackNow()) {
+                Integer targetId = monster.getTargetPlayerId();
+                if (targetId != null) {
+                    // fog 구역 검증: 플레이어가 건물(fog 구역) 안에 있을 때만 공격
+                    float[] targetPos = playerPositions.get(targetId);
+                    if (targetPos != null && collisionMap != null) {
+                        String targetZone = collisionMap.getFogZoneAt(targetPos[0], targetPos[1]);
+                        if (targetZone == null) {
+                            // 플레이어가 fog 구역 밖에 있으면 공격하지 않음
+                            continue;
+                        }
+                    }
+
+                    int damage = monster.getAttackDamage();
+                    int currentHp = getPlayerHp(roomId, targetId);
+                    int newHp = Math.max(0, currentHp - damage);
+                    setPlayerHp(roomId, targetId, newHp);
+
+                    // 공격 메시지 전송
+                    MonsterAttackPlayerMsg attackMsg = new MonsterAttackPlayerMsg(
+                        monster.id, targetId, damage, newHp, PLAYER_MAX_HP
+                    );
+                    messageCallback.broadcast(roomId, attackMsg);
+
+                    System.out.println("[몬스터 공격] " + monster.getType() + "(ID:" + monster.id +
+                        ") → 플레이어 " + targetId + " (데미지: " + damage + ", HP: " + newHp + "/" + PLAYER_MAX_HP + ")");
+                }
+            }
+
             // 위치 동기화 (100ms마다)
             if (monster.shouldSyncPosition()) {
                 sendMonsterUpdate(roomId, monster);
@@ -125,36 +194,46 @@ public class ServerMonsterManager {
 
     /**
      * 랜덤 몬스터 스폰
+     * fog 구역(건물 내부) 안에서만 스폰하여 잔디/외부에 스폰되지 않도록 합니다.
      */
     private void spawnMonster(int roomId, List<Integer> activePlayers) {
         if (activePlayers.isEmpty()) return;
 
-        // NEW : 벽이 아닌 위치를 찾을 때까지 반복 (최대 20번 시도)
+        // 실제 맵 크기 가져오기 (CollisionMap에서)
+        float actualMapWidth = (collisionMap != null) ? collisionMap.getMapWidth() : MAP_WIDTH;
+        float actualMapHeight = (collisionMap != null) ? collisionMap.getMapHeight() : MAP_HEIGHT;
+
+        // 벽이 아닌 위치를 찾을 때까지 반복 (최대 50번 시도)
         float x = 0, y = 0;
         boolean validPosition = false;
         int attempts = 0;
 
-        while (!validPosition && attempts < 20) {
-            // 전체 맵 범위에서 랜덤 스폰 (4000x4000)
-            x = (float)(Math.random() * MAP_WIDTH);
-            y = (float)(Math.random() * MAP_HEIGHT);
+        while (!validPosition && attempts < 50) {
+            // 실제 맵 범위에서 랜덤 스폰 (맵 가장자리 100픽셀 제외)
+            float margin = 100f;
+            x = margin + (float)(Math.random() * (actualMapWidth - margin * 2));
+            y = margin + (float)(Math.random() * (actualMapHeight - margin * 2));
 
             // 중앙에서 멀리 떨어진 곳만 스폰 (시작 위치 보호)
-            float centerX = MAP_WIDTH / 2f;
-            float centerY = MAP_HEIGHT / 2f;
+            float centerX = actualMapWidth / 2f;
+            float centerY = actualMapHeight / 2f;
             float distance = (float)Math.sqrt((x - centerX) * (x - centerX) + (y - centerY) * (y - centerY));
 
-            // NEW : 중앙 보호 + 벽이 아닌 곳인지 체크
-            if (distance >= 400f && !isWallInArea(x, y, 12f)) {
+            // 조건: 중앙 보호 + 벽이 아닌 곳 + fog 구역 내부(건물 내부)
+            boolean notNearCenter = distance >= 400f;
+            boolean notWall = !isWallInArea(x, y, 32f);
+            boolean insideBuilding = (collisionMap != null && collisionMap.isInsideAnyFogZone(x, y));
+
+            if (notNearCenter && notWall && insideBuilding) {
                 validPosition = true;
             }
 
             attempts++;
         }
 
-        // NEW : 유효한 위치를 못 찾으면 스폰 포기
+        // 유효한 위치를 못 찾으면 스폰 포기
         if (!validPosition) {
-            System.err.println("[몬스터 스폰] 룸 " + roomId + ": 유효한 스폰 위치를 찾지 못함 (20번 시도 실패)");
+            System.err.println("[몬스터 스폰] 룸 " + roomId + ": 유효한 스폰 위치를 찾지 못함 (50번 시도 실패)");
             return;
         }
 

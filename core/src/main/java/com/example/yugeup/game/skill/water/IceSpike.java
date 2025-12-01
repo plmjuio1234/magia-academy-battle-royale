@@ -39,17 +39,31 @@ public class IceSpike extends ElementalSkill {
         Vector2 casterPos = new Vector2(caster.getX(), caster.getY());
         Vector2 direction = targetPosition.cpy().sub(casterPos).nor();
 
-        // 아이스 스파이크 발사체 생성 (관통 3회)
-        IceSpikeProjectile projectile = new IceSpikeProjectile(
-            casterPos,
-            direction.x,
-            direction.y,
-            getDamage(),
-            230f,  // 발사 속도
-            Constants.ICE_SPIKE_PIERCE_COUNT
-        );
+        // 기준 각도 계산
+        float baseAngle = direction.angleDeg();
 
-        activeProjectiles.add(projectile);
+        // 3방향으로 얼음 가시 발사 (중앙, 왼쪽 20도, 오른쪽 20도)
+        float[] angles = {
+            baseAngle,                                    // 중앙
+            baseAngle - Constants.ICE_SPIKE_ANGLE_SPREAD, // 왼쪽 20도
+            baseAngle + Constants.ICE_SPIKE_ANGLE_SPREAD  // 오른쪽 20도
+        };
+
+        for (float angle : angles) {
+            // 각도를 방향 벡터로 변환
+            Vector2 dir = new Vector2(1, 0).setAngleDeg(angle);
+
+            IceSpikeProjectile projectile = new IceSpikeProjectile(
+                casterPos.cpy(),
+                dir.x,
+                dir.y,
+                getDamage(),
+                Constants.ICE_SPIKE_SPEED,
+                Constants.ICE_SPIKE_RANGE
+            );
+
+            activeProjectiles.add(projectile);
+        }
 
         // 쿨타임 시작
         currentCooldown = getCooldown();
@@ -57,7 +71,7 @@ public class IceSpike extends ElementalSkill {
         // 네트워크 동기화
         sendSkillCastToNetwork(targetPosition);
 
-        System.out.println("[IceSpike] 아이스 스파이크 시전! 방향: (" + direction.x + ", " + direction.y + ")");
+        System.out.println("[IceSpike] 아이스 스파이크 3방향 시전! 기준 각도: " + baseAngle);
     }
 
     /**
