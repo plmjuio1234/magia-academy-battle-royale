@@ -86,8 +86,10 @@ public class AirSlash extends ElementalSkill {
 
         currentCooldown = getCooldown();
 
-        // 네트워크 동기화
-        sendSkillCastToNetwork(targetPosition);
+        // 네트워크 동기화 (확장 버전)
+        float lifetime = Constants.AIR_SLASH_RANGE / Constants.AIR_SLASH_SPEED;
+        sendProjectileSkillToNetwork(casterPos, targetPosition,
+            Constants.AIR_SLASH_SPEED, Constants.AIR_SLASH_HITBOX_WIDTH, lifetime);
     }
 
     /**
