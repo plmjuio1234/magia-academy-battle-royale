@@ -11,6 +11,9 @@ import com.badlogic.gdx.graphics.GL20;
 import com.example.yugeup.network.NetworkManager;
 import com.example.yugeup.network.RoomManager;
 import com.example.yugeup.utils.Constants;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.TextureAtlas;
+import com.example.yugeup.utils.AssetManager;
 
 /**
  * 방 생성 다이얼로그
@@ -25,35 +28,25 @@ import com.example.yugeup.utils.Constants;
 public class CreateRoomDialog {
 
     // 다이얼로그 크기 (화면 비율에 맞게 조정)
-    private static final float DIALOG_WIDTH = Constants.SCREEN_WIDTH * 0.7f;
-    private static final float DIALOG_HEIGHT = Constants.SCREEN_HEIGHT * 0.5f;
+    private static final float DIALOG_WIDTH = Constants.SCREEN_WIDTH * 0.4f;
+    private static final float DIALOG_HEIGHT = DIALOG_WIDTH * (83f / 92f);
     private static final float DIALOG_X = (Constants.SCREEN_WIDTH - DIALOG_WIDTH) / 2f;
     private static final float DIALOG_Y = (Constants.SCREEN_HEIGHT - DIALOG_HEIGHT) / 2f;
 
-    // 플레이어 이름 입력 필드 (맨 위에 추가)
-    private static final float PLAYER_NAME_INPUT_Y = DIALOG_Y + DIALOG_HEIGHT - 200f;
-
-    private String playerName = "";  // 추가
-
     // 입력 필드 영역
-    private static final float INPUT_FIELD_HEIGHT = 80f;
-    private static final float INPUT_FIELD_MARGIN = 50f;
+    private static final float INPUT_FIELD_HEIGHT = 100f;
+//    private static final float INPUT_FIELD_MARGIN = 200f;
 
     // 방 제목 입력 필드
-    private static final float NAME_INPUT_X = DIALOG_X + INPUT_FIELD_MARGIN;
-    private static final float NAME_INPUT_Y = DIALOG_Y + DIALOG_HEIGHT - 320f;
-    private static final float NAME_INPUT_WIDTH = DIALOG_WIDTH - (INPUT_FIELD_MARGIN * 2);
-
-    // 최대 인원 입력 필드
-    private static final float PLAYER_INPUT_X = DIALOG_X + INPUT_FIELD_MARGIN;
-    private static final float PLAYER_INPUT_Y = DIALOG_Y + DIALOG_HEIGHT - 440f;
-    private static final float PLAYER_INPUT_WIDTH = DIALOG_WIDTH - (INPUT_FIELD_MARGIN * 2);
+    private static final float NAME_INPUT_WIDTH = DIALOG_WIDTH * 0.58f;
+    private static final float NAME_INPUT_X = DIALOG_X + (DIALOG_WIDTH - NAME_INPUT_WIDTH) / 2f;
+    private static final float NAME_INPUT_Y = DIALOG_Y + DIALOG_HEIGHT / 2f;
 
     // 버튼 크기
-    private static final float BUTTON_WIDTH = 250f;
-    private static final float BUTTON_HEIGHT = 80f;
+    private static final float BUTTON_WIDTH = 300f;
+    private static final float BUTTON_HEIGHT = BUTTON_WIDTH * (32f / 92f);
     private static final float BUTTON_SPACING = 50f;
-    private static final float BUTTON_Y = DIALOG_Y + 60f;
+    private static final float BUTTON_Y = DIALOG_Y + 180f;
     private static final float OK_BUTTON_X = DIALOG_X + DIALOG_WIDTH / 2f - BUTTON_WIDTH - BUTTON_SPACING / 2f;
     private static final float CANCEL_BUTTON_X = DIALOG_X + DIALOG_WIDTH / 2f + BUTTON_SPACING / 2f;
 
@@ -73,6 +66,17 @@ public class CreateRoomDialog {
     // 모바일 키보드 입력 리스너
     private Input.TextInputListener textInputListener;
 
+    // 배경 텍스처
+    private Texture backgroundTexture;
+
+    // 확인, 취소 버튼
+    private final TextureAtlas.AtlasRegion okButtonTexture;
+    private final TextureAtlas.AtlasRegion cancelButtonTexture;
+    private final TextureAtlas.AtlasRegion okButtonHoverTexture;
+    private final TextureAtlas.AtlasRegion cancelButtonHoverTexture;
+    private boolean okButtonHovered;
+    private boolean cancelButtonHovered;
+
     /**
      * CreateRoomDialog 생성자
      *
@@ -83,6 +87,17 @@ public class CreateRoomDialog {
         this.font = font;
         this.titleFont = titleFont;
         this.glyphLayout = new GlyphLayout();
+
+        // 배경 이미지 로드 (assets 폴더 기준 경로)
+        this.backgroundTexture = new Texture("images/backgrounds/create-room-frame.png");
+
+        // 확인, 취소 버튼 초기화
+        AssetManager assetManager = AssetManager.getInstance();
+        TextureAtlas uiAtlas = assetManager.getAtlas("button");
+        this.okButtonTexture = uiAtlas.findRegion("ok-button-defualt");
+        this.cancelButtonTexture = uiAtlas.findRegion("cancel-button-defualt");
+        this.okButtonHoverTexture = uiAtlas.findRegion("ok-button-hover");
+        this.cancelButtonHoverTexture = uiAtlas.findRegion("cancel-button-hover");
 
         // 모바일 키보드 입력 리스너 초기화
         this.textInputListener = new Input.TextInputListener() {
@@ -144,29 +159,26 @@ public class CreateRoomDialog {
         shapeRenderer.rect(0, 0, Constants.SCREEN_WIDTH, Constants.SCREEN_HEIGHT);
         shapeRenderer.end();
 
-        // 다이얼로그 배경 (밝은 회색)
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        shapeRenderer.setColor(0.9f, 0.9f, 0.95f, 1.0f);
-        shapeRenderer.rect(DIALOG_X, DIALOG_Y, DIALOG_WIDTH, DIALOG_HEIGHT);
-        shapeRenderer.end();
-
         // 다이얼로그 테두리
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-        shapeRenderer.setColor(Color.WHITE);
-        Gdx.gl.glLineWidth(3f);
-        shapeRenderer.rect(DIALOG_X, DIALOG_Y, DIALOG_WIDTH, DIALOG_HEIGHT);
-        shapeRenderer.end();
-        Gdx.gl.glLineWidth(1f);
+//        shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+//        shapeRenderer.setColor(Color.WHITE);
+//        Gdx.gl.glLineWidth(3f);
+//        shapeRenderer.rect(DIALOG_X, DIALOG_Y, DIALOG_WIDTH, DIALOG_HEIGHT);
+//        shapeRenderer.end();
+//        Gdx.gl.glLineWidth(1f);
 
         // 텍스트 렌더링
         batch.begin();
+
+        // 배경 이미지
+        batch.draw(backgroundTexture, DIALOG_X, DIALOG_Y, DIALOG_WIDTH, DIALOG_HEIGHT);
 
         // 타이틀
         titleFont.setColor(Color.BLACK);
         glyphLayout.setText(titleFont, "방 만들기");
         titleFont.draw(batch, "방 만들기",
             DIALOG_X + (DIALOG_WIDTH - glyphLayout.width) / 2f,
-            DIALOG_Y + DIALOG_HEIGHT - 50f);
+            DIALOG_Y + DIALOG_HEIGHT - 140f);
 
         batch.end();
 
@@ -174,41 +186,38 @@ public class CreateRoomDialog {
         renderInputFields(batch, shapeRenderer);
 
         // 버튼 렌더링
-        renderButton(shapeRenderer, batch, OK_BUTTON_X, BUTTON_Y, BUTTON_WIDTH, BUTTON_HEIGHT, "확인", Color.GREEN);
-        renderButton(shapeRenderer, batch, CANCEL_BUTTON_X, BUTTON_Y, BUTTON_WIDTH, BUTTON_HEIGHT, "취소", Color.ORANGE);
+//        renderButton(shapeRenderer, batch, OK_BUTTON_X, BUTTON_Y, BUTTON_WIDTH, BUTTON_HEIGHT, "확인", Color.GREEN);
+//        renderButton(shapeRenderer, batch, CANCEL_BUTTON_X, BUTTON_Y, BUTTON_WIDTH, BUTTON_HEIGHT, "취소", Color.ORANGE);
+        batch.begin();
+
+        // [확인] 버튼 이미지 그리기
+        batch.draw(
+            okButtonHovered ? okButtonHoverTexture : okButtonTexture,
+            OK_BUTTON_X, BUTTON_Y, BUTTON_WIDTH, BUTTON_HEIGHT
+        );
+        // [취소] 버튼 이미지 그리기
+        batch.draw(
+            cancelButtonHovered ? cancelButtonHoverTexture : cancelButtonTexture,
+            CANCEL_BUTTON_X, BUTTON_Y, BUTTON_WIDTH, BUTTON_HEIGHT
+        );
+
+        batch.end();
     }
 
     /**
      * 입력 필드를 렌더링합니다.
      */
     private void renderInputFields(SpriteBatch batch, ShapeRenderer shapeRenderer) {
-        // ===== 플레이어 이름 입력 필드 (NEW) =====
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        Color playerNameFieldColor = inputMode == 0 ? new Color(0.8f, 0.9f, 1.0f, 1.0f) : Color.WHITE;
-        shapeRenderer.setColor(playerNameFieldColor);
-        shapeRenderer.rect(NAME_INPUT_X, PLAYER_NAME_INPUT_Y, NAME_INPUT_WIDTH, INPUT_FIELD_HEIGHT);
-        shapeRenderer.end();
 
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-        shapeRenderer.setColor(inputMode == 0 ? Color.BLUE : Color.GRAY);
-        Gdx.gl.glLineWidth(2f);
-        shapeRenderer.rect(NAME_INPUT_X, PLAYER_NAME_INPUT_Y, NAME_INPUT_WIDTH, INPUT_FIELD_HEIGHT);
-        shapeRenderer.end();
-        Gdx.gl.glLineWidth(1f);
+        // 선택 시(활성화) 색상: #dcb071
+        Color activeColor = Color.valueOf("#dcb071");
 
-        batch.begin();
-        font.setColor(Color.BLACK);
-        font.draw(batch, "내 이름:", NAME_INPUT_X + 20f, PLAYER_NAME_INPUT_Y + INPUT_FIELD_HEIGHT + 30f);
-
-        String displayPlayerName = playerName.isEmpty() ? "[클릭하여 입력]" : playerName;
-        Color playerNameColor = playerName.isEmpty() ? Color.GRAY : Color.BLACK;
-        font.setColor(playerNameColor);
-        font.draw(batch, displayPlayerName, NAME_INPUT_X + 30f, PLAYER_NAME_INPUT_Y + INPUT_FIELD_HEIGHT / 2f + 10f);
-        batch.end();
+        // 선택 전(비활성화) 색상: #ecd5a1
+        Color inactiveColor = Color.valueOf("#ecd5a1");
 
         // 방 제목 입력 필드
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        Color nameFieldColor = inputMode == 0 ? new Color(0.8f, 0.9f, 1.0f, 1.0f) : Color.WHITE;
+        Color nameFieldColor = inputMode == 0 ? inactiveColor : activeColor;
         shapeRenderer.setColor(nameFieldColor);
         shapeRenderer.rect(NAME_INPUT_X, NAME_INPUT_Y, NAME_INPUT_WIDTH, INPUT_FIELD_HEIGHT);
         shapeRenderer.end();
@@ -220,37 +229,17 @@ public class CreateRoomDialog {
         shapeRenderer.end();
         Gdx.gl.glLineWidth(1f);
 
-        // 최대 인원 입력 필드
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        Color playerFieldColor = inputMode == 1 ? new Color(0.8f, 0.9f, 1.0f, 1.0f) : Color.WHITE;
-        shapeRenderer.setColor(playerFieldColor);
-        shapeRenderer.rect(PLAYER_INPUT_X, PLAYER_INPUT_Y, PLAYER_INPUT_WIDTH, INPUT_FIELD_HEIGHT);
-        shapeRenderer.end();
-
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-        shapeRenderer.setColor(inputMode == 1 ? Color.BLUE : Color.GRAY);
-        Gdx.gl.glLineWidth(2f);
-        shapeRenderer.rect(PLAYER_INPUT_X, PLAYER_INPUT_Y, PLAYER_INPUT_WIDTH, INPUT_FIELD_HEIGHT);
-        shapeRenderer.end();
-        Gdx.gl.glLineWidth(1f);
-
         // 텍스트 렌더링
         batch.begin();
 
         // 방 제목 라벨 및 값
         font.setColor(Color.BLACK);
-        font.draw(batch, "방 제목:", NAME_INPUT_X + 20f, NAME_INPUT_Y + INPUT_FIELD_HEIGHT + 30f);
+        font.draw(batch,  " ", NAME_INPUT_X + 20f, NAME_INPUT_Y + INPUT_FIELD_HEIGHT + 30f);
 
-        String displayRoomName = roomName.isEmpty() ? "[클릭하여 입력 (PC: 직접 타이핑)]" : roomName;
+        String displayRoomName = roomName.isEmpty() ? "방 제목 입력" : roomName;
         Color nameTextColor = roomName.isEmpty() ? Color.GRAY : Color.BLACK;
         font.setColor(nameTextColor);
         font.draw(batch, displayRoomName, NAME_INPUT_X + 30f, NAME_INPUT_Y + INPUT_FIELD_HEIGHT / 2f + 10f);
-
-        // 최대 인원 라벨 및 값
-        font.setColor(Color.BLACK);
-        font.draw(batch, "최대 인원:", PLAYER_INPUT_X + 20f, PLAYER_INPUT_Y + INPUT_FIELD_HEIGHT + 30f);
-        font.draw(batch, maxPlayers + "명 (↑↓ 또는 클릭으로 조절, 2~8명)",
-            PLAYER_INPUT_X + 30f, PLAYER_INPUT_Y + INPUT_FIELD_HEIGHT / 2f + 10f);
 
         batch.end();
     }
@@ -291,6 +280,10 @@ public class CreateRoomDialog {
     public boolean handleInput(float touchX, float touchY) {
         if (!isVisible) return false;
 
+        // 버튼 hover 상태
+        okButtonHovered = isButtonClicked(touchX, touchY, OK_BUTTON_X, BUTTON_Y, BUTTON_WIDTH, BUTTON_HEIGHT);
+        cancelButtonHovered = isButtonClicked(touchX, touchY, CANCEL_BUTTON_X, BUTTON_Y, BUTTON_WIDTH, BUTTON_HEIGHT);
+
         // 키보드 입력 처리 (PC용)
         handleKeyboardInput();
 
@@ -300,24 +293,6 @@ public class CreateRoomDialog {
             System.out.println("[CreateRoomDialog] NAME_INPUT 영역: (" + NAME_INPUT_X + ", " + NAME_INPUT_Y + ", " + NAME_INPUT_WIDTH + ", " + INPUT_FIELD_HEIGHT + ")");
             System.out.println("[CreateRoomDialog] OK_BUTTON 영역: (" + OK_BUTTON_X + ", " + BUTTON_Y + ", " + BUTTON_WIDTH + ", " + BUTTON_HEIGHT + ")");
 
-            // 플레이어 이름 필드 클릭
-            if (isPointInRect(touchX, touchY, NAME_INPUT_X, PLAYER_NAME_INPUT_Y, NAME_INPUT_WIDTH, INPUT_FIELD_HEIGHT)) {
-                inputMode = 0;
-                System.out.println("[CreateRoomDialog] 플레이어 이름 입력 필드 클릭");
-                Gdx.input.getTextInput(new Input.TextInputListener() {
-                    @Override
-                    public void input(String text) {
-                        if (text != null && !text.isEmpty()) {
-                            playerName = text;
-                            inputMode = 1;  // 방 제목으로 이동
-                        }
-                    }
-                    @Override
-                    public void canceled() {}
-                }, "플레이어 이름 입력", playerName, "이름을 입력하세요");
-                return true;
-            }
-
             // 방 제목 입력 필드 클릭
             if (isPointInRect(touchX, touchY, NAME_INPUT_X, NAME_INPUT_Y, NAME_INPUT_WIDTH, INPUT_FIELD_HEIGHT)) {
                 inputMode = 0;
@@ -326,15 +301,8 @@ public class CreateRoomDialog {
                 return true;
             }
 
-            // 최대 인원 필드 클릭
-            if (isPointInRect(touchX, touchY, PLAYER_INPUT_X, PLAYER_INPUT_Y, PLAYER_INPUT_WIDTH, INPUT_FIELD_HEIGHT)) {
-                inputMode = 1;
-                System.out.println("[CreateRoomDialog] 최대 인원 필드 클릭");
-                return true;
-            }
-
             // [확인] 버튼
-            if (isButtonClicked(touchX, touchY, OK_BUTTON_X, BUTTON_Y, BUTTON_WIDTH, BUTTON_HEIGHT)) {
+            if (okButtonHovered) {
                 System.out.println("[CreateRoomDialog] 확인 버튼 클릭");
                 if (!roomName.isEmpty() && maxPlayers >= 2 && maxPlayers <= 8) {
                     createRoom();
@@ -346,7 +314,7 @@ public class CreateRoomDialog {
             }
 
             // [취소] 버튼
-            if (isButtonClicked(touchX, touchY, CANCEL_BUTTON_X, BUTTON_Y, BUTTON_WIDTH, BUTTON_HEIGHT)) {
+            if (cancelButtonHovered) {
                 System.out.println("[CreateRoomDialog] 취소 버튼 클릭");
                 hide();
                 return true;
