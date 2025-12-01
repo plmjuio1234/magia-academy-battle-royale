@@ -39,6 +39,7 @@ public class CharacterPreview {
     private ShapeRenderer shapeRenderer;
     private BitmapFont font;
     private final TextureAtlas atlas;
+    private com.badlogic.gdx.graphics.g2d.GlyphLayout glyphLayout;
 
     // 버튼 활성화 상태
     private boolean startButtonEnabled;
@@ -74,6 +75,8 @@ public class CharacterPreview {
             Constants.LOBBY_BUTTON_WIDTH,
             Constants.LOBBY_BUTTON_HEIGHT
         );
+
+        this.glyphLayout = new com.badlogic.gdx.graphics.g2d.GlyphLayout();
 
         // [게임시작] 버튼은 WaitingRoomScreen에서만 사용
         this.startButtonBounds = null;
@@ -146,8 +149,11 @@ public class CharacterPreview {
         // 닉네임 표시 (캐릭터 아래, 중앙 정렬)
         font.setColor(Color.BLACK);
         String nicknameText = nickname.isEmpty() ? "닉네임 미설정" : nickname;
-        float nicknameWidth = nicknameText.length() * 18;
-        float nicknameX = x + (width - nicknameWidth) / 2;
+
+        // [수정] GlyphLayout으로 실제 텍스트 너비를 계산하여 중앙 정렬
+        glyphLayout.setText(font, nicknameText);
+        float nicknameX = x + (width - glyphLayout.width) / 2; // 패널 너비 기준 중앙 X좌표 계산
+
         font.draw(batch, nicknameText, nicknameX, characterY - 30);
 
         // [외형변경] 버튼 (중앙 하단)
