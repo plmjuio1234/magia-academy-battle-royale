@@ -29,10 +29,10 @@ public class Constants {
     // ==================== 서버 설정 ====================
 
     /** 서버 호스트 주소 */
-    public static final String SERVER_HOST = "203.234.62.50"; // 실제 로컬 IP로 변경 (에뮬레이터 + 실제 기기 모두 접속 가능)
+    public static final String SERVER_HOST = "219.254.146.234"; // 실제 로컬 IP로 변경 (에뮬레이터 + 실제 기기 모두 접속 가능)
     //public static final String SERVER_HOST = "10.0.2.2"; // 에뮬레이터 전용
     //public static final String SERVER_HOST = "127.0.0.1"; // 데스크톱 전용
-    
+
     /** 서버 TCP 포트 */
     public static final int SERVER_PORT = 5000;
 
