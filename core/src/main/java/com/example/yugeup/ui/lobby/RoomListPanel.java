@@ -146,11 +146,21 @@ public class RoomListPanel {
         );
 
         // 각 방 행의 [참가] 버튼 (컬럼 위치와 동일하게)
-        float col4_joinButton = x + width - 100;  // 텍스트 위치와 동일
-        float tableStartY = y + height - 160;
+        float col4_joinButtonX = x + width - 100; // 1. render()와 동일한 X 좌표 기준
+        float tableStartY = y + height - 240;      // 2. render()와 동일한 Y 좌표 기준
+
         for (int i = 0; i < maxVisibleRooms; i++) {
+            // 3. 각 행의 Y 좌표를 render()와 동일하게 계산
             float rowY = tableStartY - ((i + 1) * Constants.LOBBY_TABLE_ROW_HEIGHT);
-            joinButtonBounds[i].set(col4_joinButton - 10, rowY - 20, 120, 40);
+
+            // 4. 계산된 좌표로 실제 클릭 영역(Rectangle)을 설정
+            // [참가] 라는 글자를 충분히 감싸도록 영역을 잡습니다.
+            joinButtonBounds[i].set(
+                col4_joinButtonX - 10, // 텍스트 시작점보다 살짝 왼쪽에서 시작
+                rowY - 30,             // 텍스트 베이스라인보다 살짝 아래에서 시작
+                80,                    // 너비
+                40                     // 높이
+            );
         }
     }
 
