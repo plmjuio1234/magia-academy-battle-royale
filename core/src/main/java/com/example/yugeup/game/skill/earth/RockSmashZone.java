@@ -5,11 +5,13 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
 import com.example.yugeup.game.monster.Monster;
+import com.example.yugeup.game.player.Player;
 import com.example.yugeup.game.skill.SkillEffectManager;
 import com.example.yugeup.network.NetworkManager;
 import com.example.yugeup.utils.Constants;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -62,6 +64,10 @@ public class RockSmashZone {
     // 이미 맞은 몬스터 (중복 데미지 방지)
     private Set<Integer> hitMonsters;
 
+    // PVP 피격판정용
+    private Map<Integer, Player> remotePlayers;
+    private Player myPlayer;
+
     /**
      * 록 스매시 지역 생성자
      *
@@ -99,6 +105,17 @@ public class RockSmashZone {
     }
 
     /**
+     * 원격 플레이어 목록 설정 (PVP용)
+     *
+     * @param remotePlayers 원격 플레이어 맵
+     * @param myPlayer 스킬 시전자
+     */
+    public void setPlayerList(Map<Integer, Player> remotePlayers, Player myPlayer) {
+        this.remotePlayers = remotePlayers;
+        this.myPlayer = myPlayer;
+    }
+
+    /**
      * 업데이트
      *
      * @param delta 델타 타임
@@ -116,6 +133,7 @@ public class RockSmashZone {
                     // 충돌! 데미지 적용
                     state = ZoneState.IMPACT;
                     applyDamage();
+                    applyDamageToPlayers();  // PVP 데미지
                     // 즉시 LINGERING으로 전환
                     state = ZoneState.LINGERING;
                     animationTime = 0f;  // end 애니메이션 시작
@@ -163,6 +181,38 @@ public class RockSmashZone {
                 }
                 hitMonsters.add(monster.getMonsterId());
                 System.out.println("[RockSmash] 충돌! 몬스터 " + monster.getMonsterId() + " 데미지: " + damage);
+            }
+        }
+    }
+
+    /**
+     * 범위 내 플레이어에게 데미지 적용 (PVP)
+     */
+    private void applyDamageToPlayers() {
+        if (remotePlayers == null || remotePlayers.isEmpty()) return;
+
+        NetworkManager nm = NetworkManager.getInstance();
+        float hitboxRadius = Constants.ROCK_SMASH_HITBOX_SIZE / 2f;
+
+        for (Player player : remotePlayers.values()) {
+            if (player == null || player.isDead()) continue;
+
+            // 자기 자신 제외
+            if (myPlayer != null && player.getPlayerId() == myPlayer.getPlayerId()) continue;
+
+            // 거리 계산
+            float dx = player.getX() - position.x;
+            float dy = player.getY() - position.y;
+            float distance = (float) Math.sqrt(dx * dx + dy * dy);
+
+            // 충돌 판정 (48x48 범위)
+            if (distance <= hitboxRadius + 20f) {
+                // PVP 데미지 (0.5배)
+                int pvpDamage = (int) (damage * Constants.PVP_DAMAGE_MULTIPLIER);
+                if (nm != null) {
+                    nm.sendPvpAttack(player.getPlayerId(), pvpDamage, "RockSmash");
+                    System.out.println("[RockSmash] PVP 충돌! 플레이어 " + player.getPlayerId() + " 데미지: " + pvpDamage);
+                }
             }
         }
     }

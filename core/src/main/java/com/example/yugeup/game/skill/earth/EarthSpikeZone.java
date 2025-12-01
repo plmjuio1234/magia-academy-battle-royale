@@ -8,8 +8,10 @@ import com.example.yugeup.game.monster.Monster;
 import com.example.yugeup.game.skill.SkillEffectManager;
 import com.example.yugeup.network.NetworkManager;
 import com.example.yugeup.utils.Constants;
+import com.example.yugeup.game.player.Player;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -54,6 +56,11 @@ public class EarthSpikeZone {
     // 이미 맞은 몬스터 (관통 데미지)
     private Set<Integer> hitMonsters;
 
+    // PVP 피격판정용
+    private Map<Integer, Player> remotePlayers;
+    private Player myPlayer;
+    private Set<Integer> hitPlayers;
+
     /**
      * 어스 스파이크 지역 생성자
      *
@@ -69,6 +76,7 @@ public class EarthSpikeZone {
         this.maxRange = Constants.EARTH_SPIKE_RANGE;
         this.isActive = true;
         this.hitMonsters = new HashSet<>();
+        this.hitPlayers = new HashSet<>();
 
         // 속도 벡터 설정
         float speed = Constants.EARTH_SPIKE_SPEED;
@@ -91,6 +99,17 @@ public class EarthSpikeZone {
      */
     public void setMonsterList(List<Monster> monsters) {
         this.monsterList = monsters;
+    }
+
+    /**
+     * 원격 플레이어 목록 설정 (PVP용)
+     *
+     * @param remotePlayers 원격 플레이어 맵
+     * @param myPlayer 스킬 시전자
+     */
+    public void setPlayerList(Map<Integer, Player> remotePlayers, Player myPlayer) {
+        this.remotePlayers = remotePlayers;
+        this.myPlayer = myPlayer;
     }
 
     /**
@@ -123,6 +142,7 @@ public class EarthSpikeZone {
 
         // 충돌 감지
         checkCollision();
+        checkPlayerCollision();  // PVP
     }
 
     /**
@@ -152,6 +172,42 @@ public class EarthSpikeZone {
                 }
                 hitMonsters.add(monster.getMonsterId());
                 System.out.println("[EarthSpike] 충돌! 몬스터 " + monster.getMonsterId() + " 데미지: " + damage);
+            }
+        }
+    }
+
+    /**
+     * 플레이어 충돌 감지 (PVP, 관통)
+     */
+    private void checkPlayerCollision() {
+        if (remotePlayers == null || remotePlayers.isEmpty()) return;
+
+        NetworkManager nm = NetworkManager.getInstance();
+        float hitboxHalfWidth = Constants.EARTH_SPIKE_HITBOX_WIDTH / 2f;
+
+        for (Player player : remotePlayers.values()) {
+            if (player == null || player.isDead()) continue;
+
+            // 자기 자신 제외
+            if (myPlayer != null && player.getPlayerId() == myPlayer.getPlayerId()) continue;
+
+            // 이미 맞은 플레이어 제외
+            if (hitPlayers.contains(player.getPlayerId())) continue;
+
+            // 거리 계산
+            float dx = player.getX() - position.x;
+            float dy = player.getY() - position.y;
+            float distance = (float) Math.sqrt(dx * dx + dy * dy);
+
+            // 충돌 판정
+            if (distance <= hitboxHalfWidth + 20f) {
+                // PVP 데미지 (0.5배)
+                int pvpDamage = (int) (damage * Constants.PVP_DAMAGE_MULTIPLIER);
+                if (nm != null) {
+                    nm.sendPvpAttack(player.getPlayerId(), pvpDamage, "EarthSpike");
+                    System.out.println("[EarthSpike] PVP 충돌! 플레이어 " + player.getPlayerId() + " 데미지: " + pvpDamage);
+                }
+                hitPlayers.add(player.getPlayerId());
             }
         }
     }

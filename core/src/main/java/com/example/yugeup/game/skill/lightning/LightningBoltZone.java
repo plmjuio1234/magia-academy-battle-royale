@@ -8,10 +8,13 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
 import com.example.yugeup.game.monster.Monster;
+import com.example.yugeup.game.player.Player;
 import com.example.yugeup.game.skill.SkillEffectManager;
+import com.example.yugeup.network.NetworkManager;
 import com.example.yugeup.utils.Constants;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 라이트닝 볼트 지역 클래스
@@ -62,6 +65,13 @@ public class LightningBoltZone {
 
     // 몬스터 목록 참조
     private transient List<Monster> monsterList;
+
+    // 네트워크 매니저 (서버 동기화용)
+    private transient NetworkManager networkManager;
+
+    // PVP 피격판정용
+    private transient Map<Integer, Player> remotePlayers;
+    private transient Player myPlayer;
 
     /**
      * 라이트닝 볼트 지역 생성자
@@ -118,6 +128,17 @@ public class LightningBoltZone {
     }
 
     /**
+     * 원격 플레이어 목록 설정 (PVP용)
+     *
+     * @param remotePlayers 원격 플레이어 맵
+     * @param myPlayer 스킬 시전자
+     */
+    public void setPlayerList(Map<Integer, Player> remotePlayers, Player myPlayer) {
+        this.remotePlayers = remotePlayers;
+        this.myPlayer = myPlayer;
+    }
+
+    /**
      * 업데이트
      *
      * @param delta 이전 프레임으로부터의 시간 (초)
@@ -130,6 +151,7 @@ public class LightningBoltZone {
         // 데미지 적용 (첫 프레임에서)
         if (!damageApplied) {
             applyDamage();
+            applyDamageToPlayers();  // PVP 데미지
             damageApplied = true;
         }
 
@@ -155,6 +177,11 @@ public class LightningBoltZone {
     private void applyDamage() {
         if (monsterList == null) return;
 
+        // 네트워크 매니저 가져오기
+        if (networkManager == null) {
+            networkManager = NetworkManager.getInstance();
+        }
+
         for (Monster monster : monsterList) {
             if (monster == null || monster.isDead()) continue;
 
@@ -165,8 +192,49 @@ public class LightningBoltZone {
 
             // 히트박스 반경 내 몬스터에게 데미지
             if (distance <= hitboxSize) {
-                monster.takeDamage(damage);
-                System.out.println("[LightningBoltZone] 몬스터에게 " + damage + " 데미지!");
+                // 서버로 공격 메시지 전송 (클라이언트 측에서 직접 HP 변경 X)
+                if (networkManager != null) {
+                    networkManager.sendAttackMessage(
+                        monster.getMonsterId(),
+                        damage,
+                        position.x,
+                        position.y
+                    );
+                    System.out.println("[LightningBoltZone] 몬스터 ID=" + monster.getMonsterId() + "에게 " + damage + " 데미지 서버 전송!");
+                }
+            }
+        }
+    }
+
+    /**
+     * 범위 내 플레이어에게 데미지 적용 (PVP)
+     */
+    private void applyDamageToPlayers() {
+        if (remotePlayers == null || remotePlayers.isEmpty()) return;
+
+        // 네트워크 매니저 가져오기
+        if (networkManager == null) {
+            networkManager = NetworkManager.getInstance();
+        }
+
+        for (Player player : remotePlayers.values()) {
+            if (player == null || player.isDead()) continue;
+
+            // 자기 자신 제외
+            if (myPlayer != null && player.getPlayerId() == myPlayer.getPlayerId()) continue;
+
+            // 원형 거리 기반 충돌 판정
+            float dx = player.getX() - position.x;
+            float dy = player.getY() - position.y;
+            float distance = (float) Math.sqrt(dx * dx + dy * dy);
+
+            // 히트박스 반경 내 플레이어에게 PVP 데미지
+            if (distance <= hitboxSize) {
+                int pvpDamage = (int) (damage * Constants.PVP_DAMAGE_MULTIPLIER);
+                if (networkManager != null) {
+                    networkManager.sendPvpAttack(player.getPlayerId(), pvpDamage, "LightningBolt");
+                    System.out.println("[LightningBoltZone] PVP! 플레이어 ID=" + player.getPlayerId() + "에게 " + pvpDamage + " 데미지!");
+                }
             }
         }
     }

@@ -81,8 +81,11 @@ public class EarthSpike extends ElementalSkill {
         activeZones.add(zone);
         currentCooldown = getCooldown();
 
-        // 네트워크 동기화
-        sendSkillCastToNetwork(targetPosition);
+        // 네트워크 동기화 (이동형 Zone)
+        sendMovingZoneSkillToNetwork(casterPos, targetPosition,
+            Constants.EARTH_SPIKE_SPEED,
+            Constants.EARTH_SPIKE_HITBOX_WIDTH,
+            Constants.EARTH_SPIKE_RANGE);
 
         System.out.println("[EarthSpike] 어스 스파이크 시전! 방향: (" + direction.x + ", " + direction.y + ")");
     }

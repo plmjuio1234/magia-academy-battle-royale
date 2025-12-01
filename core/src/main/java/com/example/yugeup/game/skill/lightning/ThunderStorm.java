@@ -86,8 +86,11 @@ public class ThunderStorm extends ElementalSkill {
         // 쿨타임 시작
         currentCooldown = getCooldown();
 
-        // 네트워크 동기화
-        sendSkillCastToNetwork(targetPosition);
+        // 네트워크 동기화 (이동형 Zone)
+        sendMovingZoneSkillToNetwork(casterPos, targetPosition,
+            Constants.THUNDER_STORM_CLOUD_SPEED,
+            Constants.THUNDER_STORM_LIGHTNING_HITBOX_WIDTH,
+            Constants.THUNDER_STORM_RANGE);
 
         System.out.println("[ThunderStorm] 썬더 스톰 시전! 방향: (" + direction.x + ", " + direction.y + ")");
     }

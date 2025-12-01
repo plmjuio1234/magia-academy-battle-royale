@@ -93,8 +93,9 @@ public class RockSmash extends ElementalSkill {
         activeZones.add(zone);
         currentCooldown = getCooldown();
 
-        // 네트워크 동기화
-        sendSkillCastToNetwork(dropPosition);
+        // 네트워크 동기화 (고정 Zone)
+        float totalDuration = Constants.ROCK_SMASH_FALL_DURATION + Constants.ROCK_SMASH_LINGER_DURATION;
+        sendFixedZoneSkillToNetwork(dropPosition, Constants.ROCK_SMASH_HITBOX_SIZE, totalDuration);
 
         System.out.println("[RockSmash] 록 스매시 시전! 위치: (" + dropPosition.x + ", " + dropPosition.y + ")");
     }

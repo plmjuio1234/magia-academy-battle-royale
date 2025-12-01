@@ -5,11 +5,14 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
 import com.example.yugeup.game.monster.Monster;
+import com.example.yugeup.game.player.Player;
 import com.example.yugeup.game.skill.SkillEffectManager;
+import com.example.yugeup.network.NetworkManager;
 import com.example.yugeup.utils.Constants;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -76,8 +79,16 @@ public class ThunderStormZone {
     // 몬스터 목록 참조
     private transient List<Monster> monsterList;
 
+    // 네트워크 매니저 (서버 동기화용)
+    private transient NetworkManager networkManager;
+
     // 이미 피격한 몬스터 (중복 피격 방지 - 프레임당)
     private Set<Monster> hitMonstersThisFrame;
+
+    // PVP 피격판정용 (원격 플레이어)
+    private transient Map<Integer, Player> remotePlayers;
+    private transient Player myPlayer;
+    private Set<Integer> hitPlayersThisFrame;
 
     // 데미지 틱 타이머
     private float damageTickTimer = 0f;
@@ -120,6 +131,7 @@ public class ThunderStormZone {
 
         // 초기화
         this.hitMonstersThisFrame = new HashSet<>();
+        this.hitPlayersThisFrame = new HashSet<>();
 
         // 애니메이션 로드
         SkillEffectManager sem = SkillEffectManager.getInstance();
@@ -136,6 +148,17 @@ public class ThunderStormZone {
      */
     public void setMonsterList(List<Monster> monsters) {
         this.monsterList = monsters;
+    }
+
+    /**
+     * 원격 플레이어 목록 설정 (PVP용)
+     *
+     * @param remotePlayers 원격 플레이어 맵
+     * @param myPlayer 스킬 시전자 (자기 자신)
+     */
+    public void setPlayerList(Map<Integer, Player> remotePlayers, Player myPlayer) {
+        this.remotePlayers = remotePlayers;
+        this.myPlayer = myPlayer;
     }
 
     /**
@@ -164,7 +187,9 @@ public class ThunderStormZone {
             if (damageTickTimer >= DAMAGE_TICK_INTERVAL) {
                 damageTickTimer = 0f;
                 hitMonstersThisFrame.clear();
+                hitPlayersThisFrame.clear();
                 applyDamage();
+                applyDamageToPlayers();  // PVP 데미지
             }
 
             // 사거리 초과 시 종료
@@ -182,6 +207,11 @@ public class ThunderStormZone {
     private void applyDamage() {
         if (monsterList == null) return;
 
+        // 네트워크 매니저 가져오기
+        if (networkManager == null) {
+            networkManager = NetworkManager.getInstance();
+        }
+
         for (Monster monster : monsterList) {
             if (monster == null || monster.isDead()) continue;
             if (hitMonstersThisFrame.contains(monster)) continue;
@@ -197,9 +227,57 @@ public class ThunderStormZone {
 
             // 히트박스 내 몬스터에게 데미지
             if (normalizedDist <= 1.0f) {
-                monster.takeDamage(damage);
+                // 서버로 공격 메시지 전송 (클라이언트 측에서 직접 HP 변경 X)
+                if (networkManager != null) {
+                    networkManager.sendAttackMessage(
+                        monster.getMonsterId(),
+                        damage,
+                        lightningPosition.x,
+                        lightningPosition.y
+                    );
+                    System.out.println("[ThunderStormZone] 몬스터 ID=" + monster.getMonsterId() + "에게 " + damage + " 데미지 서버 전송!");
+                }
                 hitMonstersThisFrame.add(monster);
-                System.out.println("[ThunderStormZone] 몬스터에게 " + damage + " 데미지!");
+            }
+        }
+    }
+
+    /**
+     * 범위 내 플레이어에게 데미지 적용 (PVP)
+     */
+    private void applyDamageToPlayers() {
+        if (remotePlayers == null || remotePlayers.isEmpty()) return;
+
+        // 네트워크 매니저 가져오기
+        if (networkManager == null) {
+            networkManager = NetworkManager.getInstance();
+        }
+
+        for (Player player : remotePlayers.values()) {
+            if (player == null || player.isDead()) continue;
+
+            // 자기 자신 제외
+            if (myPlayer != null && player.getPlayerId() == myPlayer.getPlayerId()) continue;
+
+            // 이번 틱에 이미 피격한 플레이어 제외
+            if (hitPlayersThisFrame.contains(player.getPlayerId())) continue;
+
+            // 타원형 히트박스 충돌 판정
+            float dx = player.getX() - lightningPosition.x;
+            float dy = player.getY() - lightningPosition.y;
+
+            float halfWidth = lightningHitboxWidth / 2;
+            float halfHeight = lightningHitboxHeight / 2;
+            float normalizedDist = (dx * dx) / (halfWidth * halfWidth) + (dy * dy) / (halfHeight * halfHeight);
+
+            // 히트박스 내 플레이어에게 PVP 데미지
+            if (normalizedDist <= 1.0f) {
+                int pvpDamage = (int) (damage * Constants.PVP_DAMAGE_MULTIPLIER);
+                if (networkManager != null) {
+                    networkManager.sendPvpAttack(player.getPlayerId(), pvpDamage, "ThunderStorm");
+                    System.out.println("[ThunderStormZone] PVP! 플레이어 ID=" + player.getPlayerId() + "에게 " + pvpDamage + " 데미지!");
+                }
+                hitPlayersThisFrame.add(player.getPlayerId());
             }
         }
     }
