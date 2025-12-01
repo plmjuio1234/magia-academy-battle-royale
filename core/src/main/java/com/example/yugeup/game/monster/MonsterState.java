@@ -16,6 +16,9 @@ public enum MonsterState {
     /** 이동 중 */
     MOVING,
 
+    /** 추적 중 (서버에서 전송) */
+    PURSUING,
+
     /** 공격 중 */
     ATTACKING,
 
