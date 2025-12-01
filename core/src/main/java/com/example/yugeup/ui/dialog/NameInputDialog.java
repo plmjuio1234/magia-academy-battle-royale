@@ -3,6 +3,7 @@ package com.example.yugeup.ui.dialog;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -21,24 +22,23 @@ import com.example.yugeup.utils.Constants;
  */
 public class NameInputDialog {
 
-    // 다이얼로그 크기
-    private static final float DIALOG_WIDTH = Constants.SCREEN_WIDTH * 0.6f;
-    private static final float DIALOG_HEIGHT = Constants.SCREEN_HEIGHT * 0.35f;
+    // 다이얼로그 크기 (CreateRoomDialog와 비율 맞춤)
+    private static final float DIALOG_WIDTH = Constants.SCREEN_WIDTH * 0.4f;
+    private static final float DIALOG_HEIGHT = DIALOG_WIDTH * (83f / 92f);
     private static final float DIALOG_X = (Constants.SCREEN_WIDTH - DIALOG_WIDTH) / 2f;
     private static final float DIALOG_Y = (Constants.SCREEN_HEIGHT - DIALOG_HEIGHT) / 2f;
 
-    // 입력 필드 영역
-    private static final float INPUT_FIELD_HEIGHT = 80f;
-    private static final float INPUT_FIELD_MARGIN = 50f;
-    private static final float NAME_INPUT_X = DIALOG_X + INPUT_FIELD_MARGIN;
-    private static final float NAME_INPUT_Y = DIALOG_Y + DIALOG_HEIGHT - 180f;
-    private static final float NAME_INPUT_WIDTH = DIALOG_WIDTH - (INPUT_FIELD_MARGIN * 2);
+    // 입력 필드 영역 (CreateRoomDialog와 동일 스타일)
+    private static final float INPUT_FIELD_HEIGHT = 100f;
+    private static final float NAME_INPUT_WIDTH = DIALOG_WIDTH * 0.58f;
+    private static final float NAME_INPUT_X = DIALOG_X + (DIALOG_WIDTH - NAME_INPUT_WIDTH) / 2f;
+    private static final float NAME_INPUT_Y = DIALOG_Y + DIALOG_HEIGHT / 2f;
 
-    // 버튼 크기
-    private static final float BUTTON_WIDTH = 250f;
-    private static final float BUTTON_HEIGHT = 80f;
+    // 버튼 크기 (CreateRoomDialog와 동일 스타일)
+    private static final float BUTTON_WIDTH = 300f;
+    private static final float BUTTON_HEIGHT = BUTTON_WIDTH * (32f / 92f);
     private static final float BUTTON_SPACING = 50f;
-    private static final float BUTTON_Y = DIALOG_Y + 60f;
+    private static final float BUTTON_Y = DIALOG_Y + 180f;
     private static final float OK_BUTTON_X = DIALOG_X + DIALOG_WIDTH / 2f - BUTTON_WIDTH - BUTTON_SPACING / 2f;
     private static final float CANCEL_BUTTON_X = DIALOG_X + DIALOG_WIDTH / 2f + BUTTON_SPACING / 2f;
 
@@ -53,6 +53,15 @@ public class NameInputDialog {
 
     // 콜백
     private NameInputCallback callback;
+
+    // UI
+    private Texture backgroundTexture;
+    private final com.badlogic.gdx.graphics.g2d.TextureAtlas.AtlasRegion okButtonTexture;
+    private final com.badlogic.gdx.graphics.g2d.TextureAtlas.AtlasRegion cancelButtonTexture;
+    private final com.badlogic.gdx.graphics.g2d.TextureAtlas.AtlasRegion okButtonHoverTexture;
+    private final com.badlogic.gdx.graphics.g2d.TextureAtlas.AtlasRegion cancelButtonHoverTexture;
+    private boolean okButtonHovered = false;
+    private boolean cancelButtonHovered = false;
 
     /**
      * 이름 입력 완료 콜백 인터페이스
@@ -71,6 +80,18 @@ public class NameInputDialog {
         this.font = font;
         this.titleFont = titleFont;
         this.glyphLayout = new GlyphLayout();
+
+        // AssetManager를 통해 리소스를 가져옵니다.
+        com.example.yugeup.utils.AssetManager assetManager = com.example.yugeup.utils.AssetManager.getInstance();
+        com.badlogic.gdx.graphics.g2d.TextureAtlas buttonAtlas = assetManager.getAtlas("button");
+
+        // 배경 및 버튼 이미지 초기화
+        // 배경 이미지 로드 (assets 폴더 기준 경로)
+        this.backgroundTexture = new Texture("images/backgrounds/create-room-frame.png"); // 배경 이미지
+        this.okButtonTexture = buttonAtlas.findRegion("ok-button-defualt");
+        this.cancelButtonTexture = buttonAtlas.findRegion("cancel-button-defualt");
+        this.okButtonHoverTexture = buttonAtlas.findRegion("ok-button-hover");
+        this.cancelButtonHoverTexture = buttonAtlas.findRegion("cancel-button-hover");
     }
 
     /**
@@ -110,79 +131,70 @@ public class NameInputDialog {
     public void render(SpriteBatch batch, ShapeRenderer shapeRenderer) {
         if (!isVisible) return;
 
-        // 배경 어둡게 (반투명 검정)
+        // 1. 화면 전체를 반투명 검은색으로 덮기 (기존 로직 유지)
         Gdx.gl.glEnable(GL20.GL_BLEND);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
         shapeRenderer.setColor(0, 0, 0, 0.7f);
         shapeRenderer.rect(0, 0, Constants.SCREEN_WIDTH, Constants.SCREEN_HEIGHT);
         shapeRenderer.end();
+        Gdx.gl.glDisable(GL20.GL_BLEND);
 
-        // 다이얼로그 배경 (밝은 회색)
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        shapeRenderer.setColor(0.9f, 0.9f, 0.95f, 1.0f);
-        shapeRenderer.rect(DIALOG_X, DIALOG_Y, DIALOG_WIDTH, DIALOG_HEIGHT);
-        shapeRenderer.end();
-
-        // 다이얼로그 테두리
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-        shapeRenderer.setColor(Color.WHITE);
-        Gdx.gl.glLineWidth(3f);
-        shapeRenderer.rect(DIALOG_X, DIALOG_Y, DIALOG_WIDTH, DIALOG_HEIGHT);
-        shapeRenderer.end();
-        Gdx.gl.glLineWidth(1f);
-
-        // 텍스트 렌더링
         batch.begin();
 
-        // 타이틀
+        // 2. 다이얼로그 배경 이미지 그리기
+        batch.draw(backgroundTexture, DIALOG_X, DIALOG_Y, DIALOG_WIDTH, DIALOG_HEIGHT);
+
+        // 3. 타이틀 텍스트 그리기 (위치 조정)
         titleFont.setColor(Color.BLACK);
         glyphLayout.setText(titleFont, "이름 설정");
         titleFont.draw(batch, "이름 설정",
             DIALOG_X + (DIALOG_WIDTH - glyphLayout.width) / 2f,
-            DIALOG_Y + DIALOG_HEIGHT - 50f);
+            DIALOG_Y + DIALOG_HEIGHT - 140f); // CreateRoomDialog와 동일한 Y 위치
 
         batch.end();
 
-        // 입력 필드 렌더링
+        // 4. 입력 필드 렌더링
         renderInputField(batch, shapeRenderer);
 
-        // 버튼 렌더링
-        renderButton(shapeRenderer, batch, OK_BUTTON_X, BUTTON_Y, BUTTON_WIDTH, BUTTON_HEIGHT, "확인", Color.GREEN);
-        renderButton(shapeRenderer, batch, CANCEL_BUTTON_X, BUTTON_Y, BUTTON_WIDTH, BUTTON_HEIGHT, "취소", Color.ORANGE);
+        batch.begin();
+        // 5. 버튼 이미지 그리기 (호버 상태 반영)
+        batch.draw(
+            okButtonHovered ? okButtonHoverTexture : okButtonTexture,
+            OK_BUTTON_X, BUTTON_Y, BUTTON_WIDTH, BUTTON_HEIGHT
+        );
+        batch.draw(
+            cancelButtonHovered ? cancelButtonHoverTexture : cancelButtonTexture,
+            CANCEL_BUTTON_X, BUTTON_Y, BUTTON_WIDTH, BUTTON_HEIGHT
+        );
+
+        batch.end();
     }
 
     /**
      * 입력 필드를 렌더링합니다.
      */
     private void renderInputField(SpriteBatch batch, ShapeRenderer shapeRenderer) {
-        // 입력 필드 배경
+        // 입력 필드 배경 (CreateRoomDialog 스타일)
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        shapeRenderer.setColor(new Color(0.8f, 0.9f, 1.0f, 1.0f));
+        shapeRenderer.setColor(Color.valueOf("#ecd5a1"));
         shapeRenderer.rect(NAME_INPUT_X, NAME_INPUT_Y, NAME_INPUT_WIDTH, INPUT_FIELD_HEIGHT);
         shapeRenderer.end();
 
-        // 입력 필드 테두리
+        // 입력 필드 테두리 (CreateRoomDialog 스타일)
         shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-        shapeRenderer.setColor(Color.BLUE);
+        shapeRenderer.setColor(Color.GRAY);
         Gdx.gl.glLineWidth(2f);
         shapeRenderer.rect(NAME_INPUT_X, NAME_INPUT_Y, NAME_INPUT_WIDTH, INPUT_FIELD_HEIGHT);
         shapeRenderer.end();
         Gdx.gl.glLineWidth(1f);
 
-        // 텍스트 렌더링
+        // 입력 필드 텍스트
         batch.begin();
-
-        // 라벨
-        font.setColor(Color.BLACK);
-        font.draw(batch, "플레이어 이름:", NAME_INPUT_X + 20f, NAME_INPUT_Y + INPUT_FIELD_HEIGHT + 30f);
-
-        // 입력된 이름 또는 안내 문구
-        String displayName = playerName.isEmpty() ? "[클릭하여 입력 (PC: 직접 타이핑)]" : playerName;
+        String displayName = playerName.isEmpty() ? "닉네임 입력" : playerName;
         Color nameColor = playerName.isEmpty() ? Color.GRAY : Color.BLACK;
         font.setColor(nameColor);
         font.draw(batch, displayName, NAME_INPUT_X + 30f, NAME_INPUT_Y + INPUT_FIELD_HEIGHT / 2f + 10f);
-
         batch.end();
     }
 
@@ -224,21 +236,21 @@ public class NameInputDialog {
     public boolean handleInput(float touchX, float touchY) {
         if (!isVisible) return false;
 
-        // 키보드 입력 처리 (PC용)
+        // 마우스 호버 상태 업데이트
+        okButtonHovered = isPointInRect(touchX, touchY, OK_BUTTON_X, BUTTON_Y, BUTTON_WIDTH, BUTTON_HEIGHT);
+        cancelButtonHovered = isPointInRect(touchX, touchY, CANCEL_BUTTON_X, BUTTON_Y, BUTTON_WIDTH, BUTTON_HEIGHT);
+
+        // 키보드 입력 처리 (기존 로직 유지)
         handleKeyboardInput();
 
         // 터치/마우스 클릭 처리
         if (Gdx.input.justTouched()) {
-            System.out.println("[NameInputDialog] 클릭 좌표: (" + touchX + ", " + touchY + ")");
-
-            // 입력 필드 클릭
+            // 입력 필드 클릭 (기존 로직 유지)
             if (isPointInRect(touchX, touchY, NAME_INPUT_X, NAME_INPUT_Y, NAME_INPUT_WIDTH, INPUT_FIELD_HEIGHT)) {
-                System.out.println("[NameInputDialog] 이름 입력 필드 클릭");
-                // 모바일 키보드 띄우기
                 Gdx.input.getTextInput(new Input.TextInputListener() {
                     @Override
                     public void input(String text) {
-                        if (text != null && !text.isEmpty()) {
+                        if (text != null) {
                             playerName = text;
                         }
                     }
@@ -249,12 +261,11 @@ public class NameInputDialog {
                 return true;
             }
 
-            // [확인] 버튼
-            if (isButtonClicked(touchX, touchY, OK_BUTTON_X, BUTTON_Y, BUTTON_WIDTH, BUTTON_HEIGHT)) {
-                System.out.println("[NameInputDialog] 확인 버튼 클릭");
-                if (!playerName.isEmpty()) {
+            // [확인] 버튼 (isButtonClicked 대신 호버 상태 변수 사용)
+            if (okButtonHovered) {
+                if (!playerName.trim().isEmpty()) { // 공백만 있는 경우 방지
                     if (callback != null) {
-                        callback.onNameSet(playerName);
+                        callback.onNameSet(playerName.trim());
                     }
                     hide();
                 } else {
@@ -263,9 +274,8 @@ public class NameInputDialog {
                 return true;
             }
 
-            // [취소] 버튼
-            if (isButtonClicked(touchX, touchY, CANCEL_BUTTON_X, BUTTON_Y, BUTTON_WIDTH, BUTTON_HEIGHT)) {
-                System.out.println("[NameInputDialog] 취소 버튼 클릭");
+            // [취소] 버튼 (isButtonClicked 대신 호버 상태 변수 사용)
+            if (cancelButtonHovered) {
                 hide();
                 return true;
             }
