@@ -31,7 +31,7 @@ public class Constants {
     /** 서버 호스트 주소 */
     public static final String SERVER_HOST = "10.0.2.2"; //TODO: 서버 아이피 수정 <- 현재는 에뮬 전용 로컬호스트인 10.0.2.2로 하고 있음
     //public static final String SERVER_HOST = "127.0.0.1";
-    
+
     /** 서버 TCP 포트 */
     public static final int SERVER_PORT = 5000;
 
@@ -543,19 +543,19 @@ public class Constants {
     public static final float MENU_BUTTON_HEIGHT = 208f;
 
     /** 메인 메뉴 버튼 간격 */
-    public static final float MENU_BUTTON_SPACING = 70f;
+    public static final float MENU_BUTTON_SPACING = 25f;
 
     /** 로고 Y 위치 */
-    public static final float MENU_LOGO_Y = 800f;
+    public static final float MENU_LOGO_Y = 880f;
 
     /** 로고 너비 (2:1 비율) */
-    public static final float MENU_LOGO_WIDTH = 1100f;
+    public static final float MENU_LOGO_WIDTH = 800f;
 
     /** 로고 높이 (2:1 비율) */
-    public static final float MENU_LOGO_HEIGHT = 550f;
+    public static final float MENU_LOGO_HEIGHT = 400f;
 
     /** 첫 번째 버튼 Y 위치 */
-    public static final float MENU_FIRST_BUTTON_Y = 650f;
+    public static final float MENU_FIRST_BUTTON_Y = 645f;
 
     /** 화면 전환 애니메이션 시간 (초) */
     public static final float SCREEN_TRANSITION_DURATION = 1.0f;
