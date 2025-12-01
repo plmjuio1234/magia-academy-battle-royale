@@ -49,6 +49,7 @@ public class WaitingRoomScreen implements Screen {
     // 폰트
     private BitmapFont font;
     private BitmapFont titleFont;
+    private com.badlogic.gdx.graphics.g2d.GlyphLayout glyphLayout;
 
     // 배경
     private Texture backgroundTexture;
@@ -92,6 +93,7 @@ public class WaitingRoomScreen implements Screen {
         // 렌더링 초기화
         batch = new SpriteBatch();
         shapeRenderer = new ShapeRenderer();
+        glyphLayout = new com.badlogic.gdx.graphics.g2d.GlyphLayout();
         viewport = new FitViewport(Constants.SCREEN_WIDTH, Constants.SCREEN_HEIGHT);
 
         // 에셋 로드
@@ -307,27 +309,33 @@ public class WaitingRoomScreen implements Screen {
             if (i < players.size()) {
                 PlayerInfo player = players.get(i);
 
-                // 캐릭터 스프라이트 (하단 중앙)
+                // 캐릭터 스프라이트 (이 부분은 변경 없음)
                 float charX = x + (slotWidth - Constants.WAITROOM_CHARACTER_SIZE) / 2f;
                 float charY = y + 50f;
                 batch.draw(characterFront, charX, charY, Constants.WAITROOM_CHARACTER_SIZE, Constants.WAITROOM_CHARACTER_SIZE);
 
                 // 플레이어 이름 (상단 중앙)
-                font.setColor(Color.BLACK);  // 검은색으로 통일
+                font.setColor(Color.BLACK);
                 String playerName = player.playerName;
                 if (player.isHost) {
                     playerName += " (방장)";
-                    // 방장도 검은색으로 통일 (Color.GOLD 제거)
                 }
 
-                // 텍스트 중앙 정렬 (대략적)
-                float textX = x + slotWidth / 2f - (playerName.length() * 15f);
+                // [수정] GlyphLayout을 사용하여 정확한 중앙 정렬
+                glyphLayout.setText(font, playerName);
+                float textX = x + (slotWidth - glyphLayout.width) / 2f;
                 font.draw(batch, playerName, textX, y + slotHeight - 50f);
 
             } else {
                 // 빈 자리
                 font.setColor(Color.GRAY);
-                font.draw(batch, "빈 자리", x + slotWidth / 2f - 60f, y + slotHeight / 2f);
+                String emptyText = "빈 자리";
+
+                // [수정] GlyphLayout을 사용하여 가로 및 세로 중앙 정렬
+                glyphLayout.setText(font, emptyText);
+                float textX = x + (slotWidth - glyphLayout.width) / 2f; // 가로 중앙
+                float textY = y + (slotHeight + glyphLayout.height) / 2f; // 세로 중앙
+                font.draw(batch, emptyText, textX, textY);
             }
             batch.end();
         }
