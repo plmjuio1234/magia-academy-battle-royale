@@ -393,7 +393,8 @@ public class WaitingRoomScreen implements Screen {
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
 
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        shapeRenderer.setColor(0.4f, 0.4f, 0.45f, 0.45f);  // 연한 회색, 높은 투명도 (0.45 = 55% 투명)
+        shapeRenderer.setColor(Color.valueOf("#ecd5a1"));  // 연한 회색, 높은 투명도 (0.45 = 55% 투명)
+        shapeRenderer.getColor().a = 0.9f;
         // 둥근 모서리 입력창 (반경 8px)
         renderRoundedRect(shapeRenderer, chatInputBounds.x, chatInputBounds.y,
                          chatInputBounds.width, chatInputBounds.height, 8f);
@@ -607,10 +608,29 @@ public class WaitingRoomScreen implements Screen {
             float touchY = touchPos.y;
 
             // 채팅 입력창 클릭 (포커스)
+            // 채팅 입력창 클릭 (포커스)
             if (chatInputBounds.contains(touchX, touchY)) {
-                chatInputFocused = true;
-                System.out.println("[WaitingRoomScreen] 채팅 입력창 포커스 - 키보드로 입력하세요");
-                return;
+                System.out.println("[WaitingRoomScreen] 채팅 입력창 클릭 - 모바일 키보드 요청");
+
+                // [수정] 모바일 키보드를 띄우고 입력 결과를 받는 리스너 호출
+                Gdx.input.getTextInput(new Input.TextInputListener() {
+                    @Override
+                    public void input(String text) {
+                        // 사용자가 입력을 완료하고 '확인'을 눌렀을 때 호출됨
+                        if (text != null && !text.trim().isEmpty()) {
+                            chatInput = text; // 입력받은 텍스트로 chatInput을 교체
+                            sendChatMessage(); // 바로 메시지 전송
+                        }
+                    }
+
+                    @Override
+                    public void canceled() {
+                        // 사용자가 입력을 취소했을 때 호출됨
+                        System.out.println("[WaitingRoomScreen] 채팅 입력 취소");
+                    }
+                }, "채팅 메시지 입력", chatInput, "메시지를 입력하세요...");
+
+                return; // 입력창을 띄웠으므로 다른 입력 처리는 중단
             }
 
             // 전송 버튼 클릭
