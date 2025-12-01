@@ -575,17 +575,29 @@ public class Constants {
     /** 로비 패널 하단 여백 */
     public static final float LOBBY_PANEL_BOTTOM_MARGIN = 150f;
 
-    /** 방 목록 패널 X 위치 (UI 디버거로 조정됨) */
-    public static final float LOBBY_ROOM_LIST_X = 586.0f;
+//    /** 방 목록 패널 X 위치 (UI 디버거로 조정됨) */
+//    public static final float LOBBY_ROOM_LIST_X = 586.0f;
+//
+//    /** 방 목록 패널 Y 위치 (UI 디버거로 조정됨) */
+//    public static final float LOBBY_ROOM_LIST_Y = 419.0f;
+//
+//    /** 방 목록 패널 너비 (UI 디버거로 조정됨) */
+//    public static final float LOBBY_ROOM_LIST_WIDTH = 751.0f;
+//
+//    /** 방 목록 패널 높이 (UI 디버거로 조정됨) */
+//    public static final float LOBBY_ROOM_LIST_HEIGHT = 640.0f;
 
-    /** 방 목록 패널 Y 위치 (UI 디버거로 조정됨) */
-    public static final float LOBBY_ROOM_LIST_Y = 419.0f;
+    /** 방 목록 패널 X 위치 */
+    public static final float LOBBY_ROOM_LIST_X = 586f;
 
-    /** 방 목록 패널 너비 (UI 디버거로 조정됨) */
-    public static final float LOBBY_ROOM_LIST_WIDTH = 751.0f;
+    /** 방 목록 패널 Y 위치 */
+    public static final float LOBBY_ROOM_LIST_Y = 419f;
 
-    /** 방 목록 패널 높이 (UI 디버거로 조정됨) */
-    public static final float LOBBY_ROOM_LIST_HEIGHT = 640.0f;
+    /** 방 목록 패널 너비 */
+    public static final float LOBBY_ROOM_LIST_WIDTH = 900f; // 너비 1200
+
+    /** 방 목록 패널 높이 */
+    public static final float LOBBY_ROOM_LIST_HEIGHT = 800f; // 높이 800
 
     /** 캐릭터 프리뷰 패널 X 위치 (UI 디버거로 조정됨) */
     public static final float LOBBY_CHARACTER_PREVIEW_X = 1693.0f;
