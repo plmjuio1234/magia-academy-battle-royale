@@ -53,6 +53,9 @@ public class LobbyScreen implements Screen {
     private RoomListPanel roomListPanel;
     private CharacterPreview characterPreview;
 
+    // 버튼 아틀라스
+    private TextureAtlas buttonAtlas;
+
     // 다이얼로그
     private CreateRoomDialog createRoomDialog;
     private ShapeRenderer shapeRenderer;
@@ -114,13 +117,21 @@ public class LobbyScreen implements Screen {
         // 폰트 로드
         this.font = assetManager.getFont("font_small");
 
+        // 버튼 로드
+        this.buttonAtlas = assetManager.getAtlas("button");
+        if (buttonAtlas != null) {
+            System.out.println("[LobbyScreen] 버튼 아틀라스 로드 성공");
+        } else {
+            System.err.println("[LobbyScreen] 버튼 아틀라스 로드 실패!");
+        }
+
         // UI 패널 초기화 (UIDebugger 값 사용)
         roomListPanel = new RoomListPanel(
             com.example.yugeup.utils.UIDebugger.getLobbyRoomListX(),
             com.example.yugeup.utils.UIDebugger.getLobbyRoomListY(),
             com.example.yugeup.utils.UIDebugger.getLobbyRoomListWidth(),
             com.example.yugeup.utils.UIDebugger.getLobbyRoomListHeight(),
-            font
+            font, buttonAtlas
         );
 
         characterPreview = new CharacterPreview(
