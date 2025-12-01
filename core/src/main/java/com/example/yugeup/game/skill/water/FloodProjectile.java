@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Vector2;
 import com.example.yugeup.game.monster.Monster;
+import com.example.yugeup.game.player.Player;
 import com.example.yugeup.game.skill.BaseProjectile;
 import com.example.yugeup.game.skill.SkillEffectManager;
 import com.example.yugeup.network.NetworkManager;
@@ -33,6 +34,7 @@ public class FloodProjectile extends BaseProjectile {
     private float tickTimer = 0f;
     private float tickRate;
     private Set<Integer> recentlyHitMonsters;
+    private Set<Integer> recentlyHitPlayers;
 
     // 렌더링 크기
     private float renderWidth;
@@ -58,6 +60,7 @@ public class FloodProjectile extends BaseProjectile {
         this.startPosition = new Vector2(origin);
         this.tickRate = Constants.FLOOD_TICK_RATE;
         this.recentlyHitMonsters = new HashSet<>();
+        this.recentlyHitPlayers = new HashSet<>();
 
         // 히트박스 30x45에 스케일 1배 적용
         this.renderWidth = Constants.FLOOD_HITBOX_WIDTH * Constants.FLOOD_SCALE;
@@ -107,10 +110,12 @@ public class FloodProjectile extends BaseProjectile {
         if (tickTimer >= tickRate) {
             tickTimer = 0f;
             recentlyHitMonsters.clear();  // 새 틱에서 다시 맞을 수 있음
+            recentlyHitPlayers.clear();
         }
 
         // 충돌 감지 (도트딜)
         checkDotDamage();
+        checkDotDamageToPlayers();  // PVP 도트딜
     }
 
     /**
@@ -140,6 +145,35 @@ public class FloodProjectile extends BaseProjectile {
                 }
                 recentlyHitMonsters.add(monster.getMonsterId());
                 System.out.println("[Flood] 도트딜! 몬스터 " + monster.getMonsterId() + " 데미지: " + damage);
+            }
+        }
+    }
+
+    /**
+     * 플레이어에게 도트딜 (PVP)
+     */
+    private void checkDotDamageToPlayers() {
+        if (playerList == null || playerList.isEmpty()) return;
+
+        NetworkManager nm = NetworkManager.getInstance();
+        float hitboxRadius = Math.max(renderWidth, renderHeight) / 2f;
+
+        for (Player player : playerList) {
+            if (player == null || player.isDead()) continue;
+            if (player.getPlayerId() == ownerPlayerId) continue;
+            if (recentlyHitPlayers.contains(player.getPlayerId())) continue;
+
+            float dx = player.getX() - position.x;
+            float dy = player.getY() - position.y;
+            float distance = (float) Math.sqrt(dx * dx + dy * dy);
+
+            if (distance <= hitboxRadius + 20f) {
+                int pvpDamage = (int) (damage * Constants.PVP_DAMAGE_MULTIPLIER);
+                if (nm != null) {
+                    nm.sendPvpAttack(player.getPlayerId(), pvpDamage, "Flood");
+                }
+                recentlyHitPlayers.add(player.getPlayerId());
+                System.out.println("[Flood] PVP 도트딜! 플레이어 " + player.getPlayerId() + " 데미지: " + pvpDamage);
             }
         }
     }
