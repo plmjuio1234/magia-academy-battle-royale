@@ -850,7 +850,7 @@ public class Constants {
     public static final float WAITROOM_SLOT_Y = SCREEN_HEIGHT - (WAITROOM_SLOT_OFFSET_Y * BG_SCALE) - WAITROOM_SLOT_HEIGHT;
 
     /** 플레이어 캐릭터 스프라이트 크기 */
-    public static final float WAITROOM_CHARACTER_SIZE = 180f;
+    public static final float WAITROOM_CHARACTER_SIZE = 250f;
 
     // 채팅 영역 (좌측 하단) - 이미지 3번 픽셀 측정값 기준
     // ========== 여기서 값을 조절하세요! ==========
