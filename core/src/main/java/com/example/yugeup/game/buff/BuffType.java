@@ -24,7 +24,8 @@ public enum BuffType {
     // 땅 원소 버프
     STUN("기절", "이동 및 공격이 불가능합니다"),
     DEFENSE("강화", "방어력이 증가합니다"),
-    REGEN("재생", "시간에 따라 체력을 회복합니다");
+    REGEN("재생", "시간에 따라 체력을 회복합니다"),
+    DAMAGE_REDUCTION("피해 감소", "받는 피해가 감소합니다");
 
     // 버프 이름
     private final String displayName;

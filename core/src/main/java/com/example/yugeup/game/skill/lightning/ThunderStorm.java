@@ -1,10 +1,12 @@
 package com.example.yugeup.game.skill.lightning;
 
 import com.badlogic.gdx.math.Vector2;
+import com.example.yugeup.game.monster.Monster;
 import com.example.yugeup.game.player.Player;
 import com.example.yugeup.game.skill.ElementType;
 import com.example.yugeup.game.skill.ElementalSkill;
 import com.example.yugeup.utils.Constants;
+
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -13,7 +15,10 @@ import java.util.List;
  * 썬더 스톰 스킬 클래스
  *
  * 번개 원소의 세 번째 스킬입니다.
- * 지속적으로 낙뢰를 쏟아붓는 지역을 생성합니다.
+ * 보는 방향으로 이동하는 비구름과 그 아래 번개를 생성합니다.
+ * 구름: 속도 20, 사거리 200
+ * 번개: 구름 아래 60칸, 54x54 히트박스
+ * 각도 고정.
  *
  * @author YuGeup Development Team
  * @version 1.0
@@ -22,6 +27,9 @@ public class ThunderStorm extends ElementalSkill {
 
     // 활성 지역 목록
     private transient List<ThunderStormZone> activeZones;
+
+    // 몬스터 목록 참조
+    private transient List<Monster> monsterList;
 
     /**
      * 썬더 스톰 생성자
@@ -36,31 +44,43 @@ public class ThunderStorm extends ElementalSkill {
     }
 
     /**
+     * 몬스터 목록 설정
+     *
+     * @param monsters 몬스터 목록
+     */
+    public void setMonsterList(List<Monster> monsters) {
+        this.monsterList = monsters;
+    }
+
+    /**
      * 썬더 스톰을 시전합니다.
      *
      * @param caster 시전자
-     * @param targetPosition 목표 위치
+     * @param targetPosition 목표 위치 (방향 계산용)
      */
     @Override
     public void cast(Player caster, Vector2 targetPosition) {
-        // 쿨타임 확인
         if (!isReady()) {
             return;
         }
 
-        // 마나 확인 및 소모
         if (!caster.getStats().consumeMana(getManaCost())) {
             return;
         }
 
-        // 썬더 스톰 지역 생성
-        ThunderStormZone zone = new ThunderStormZone(
-            targetPosition.x,
-            targetPosition.y,
-            getDamage(),
-            Constants.THUNDER_STORM_DURATION
-        );
+        // 시전 위치 및 방향 계산
+        Vector2 casterPos = new Vector2(caster.getX(), caster.getY());
+        Vector2 direction = targetPosition.cpy().sub(casterPos).nor();
 
+        // 썬더 스톰 지역 생성 (플레이어 위치에서 시작)
+        ThunderStormZone zone = new ThunderStormZone(
+            casterPos.x,
+            casterPos.y,
+            direction.x,
+            direction.y,
+            getDamage()
+        );
+        zone.setMonsterList(monsterList);
         activeZones.add(zone);
 
         // 쿨타임 시작
@@ -69,7 +89,7 @@ public class ThunderStorm extends ElementalSkill {
         // 네트워크 동기화
         sendSkillCastToNetwork(targetPosition);
 
-        System.out.println("[ThunderStorm] 썬더 스톰 시전!");
+        System.out.println("[ThunderStorm] 썬더 스톰 시전! 방향: (" + direction.x + ", " + direction.y + ")");
     }
 
     /**

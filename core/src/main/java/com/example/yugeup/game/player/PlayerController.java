@@ -77,8 +77,8 @@ public class PlayerController implements InputProcessor {
 
         // 플레이어 이동
         if (direction.len() > 0) {
-            // 이동 속도 = 방향 * 속도
-            float speed = Constants.PLAYER_MOVE_SPEED;
+            // 이동 속도 = 기본 속도 * 버프 배율 (폭풍 스킬 등)
+            float speed = Constants.PLAYER_MOVE_SPEED * player.getSpeedMultiplier();
             player.setVelocity(direction.x * speed, direction.y * speed);
         } else {
             // 입력 없음
@@ -136,13 +136,9 @@ public class PlayerController implements InputProcessor {
 
     /**
      * 서버로 플레이어 위치 전송
+     * 정지 상태여도 전송하여 다른 플레이어가 정확한 위치를 알 수 있도록 함
      */
     private void sendPlayerMove() {
-        // 정지 상태면 전송하지 않음
-        if (player.getVelocity().len() < 0.01f) {
-            return;
-        }
-
         PlayerMoveMsg msg = new PlayerMoveMsg();
         msg.playerId = player.getPlayerId();
         msg.x = player.getX();
@@ -178,8 +174,17 @@ public class PlayerController implements InputProcessor {
                                 hudRenderer.getDirectionIndicator().activate(player.getX(), player.getY());
                             }
                             System.out.println("[PlayerController] 방향 선택 모드 시작: " + skill.getName());
+                        } else if (needsRangeConfirm(skill)) {
+                            // 범위 확인 모드로 진입 (인페르노 등 광역 스킬)
+                            isSelectingSkillDirection = true;
+                            pendingSkill = skill;
+                            if (hudRenderer.getDirectionIndicator() != null) {
+                                float range = getSkillRange(skill);
+                                hudRenderer.getDirectionIndicator().activateRangeMode(player.getX(), player.getY(), range);
+                            }
+                            System.out.println("[PlayerController] 범위 확인 모드 시작: " + skill.getName());
                         } else {
-                            // 광역 스킬 등 즉시 시전
+                            // 즉시 시전 스킬
                             Vector2 targetPosition = new Vector2(player.getX(), player.getY());
                             skill.cast(player, targetPosition);
                             System.out.println("[PlayerController] ✅ 즉시 스킬 발동: " + skill.getName());
@@ -207,9 +212,38 @@ public class PlayerController implements InputProcessor {
     private boolean needsDirection(ElementalSkill skill) {
         // 발사체 스킬은 방향 필요
         String skillName = skill.getName();
-        return skillName.contains("파이어볼") || skillName.contains("워터 샷") ||
-               skillName.contains("에어 슬래시") || skillName.contains("라이트닝 볼트") ||
-               skillName.contains("록 스매시");
+        return skillName.contains("파이어볼") || skillName.contains("플레임 웨이브") ||
+               skillName.contains("워터 샷") || skillName.contains("아이스 스파이크") ||
+               skillName.contains("플러드") || skillName.contains("에어 슬래시") ||
+               skillName.contains("토네이도") || skillName.contains("라이트닝 볼트") ||
+               skillName.contains("체인 라이트닝") || skillName.contains("썬더 스톰") ||
+               skillName.contains("록 스매시") || skillName.contains("어스 스파이크");
+    }
+
+    /**
+     * 스킬이 범위 확인이 필요한지 확인 (광역 스킬)
+     *
+     * @param skill 확인할 스킬
+     * @return 범위 확인 필요 여부
+     */
+    private boolean needsRangeConfirm(ElementalSkill skill) {
+        String skillName = skill.getName();
+        // 썬더 스톰은 방향 지정식으로 변경됨 (needsDirection에서 처리)
+        return skillName.contains("인페르노") || skillName.contains("스톤 실드");
+    }
+
+    /**
+     * 광역 스킬의 범위 반경 반환
+     *
+     * @param skill 스킬
+     * @return 범위 반경 (픽셀)
+     */
+    private float getSkillRange(ElementalSkill skill) {
+        String skillName = skill.getName();
+        if (skillName.contains("인페르노")) {
+            return com.example.yugeup.utils.Constants.INFERNO_RANGE;
+        }
+        return 100f;  // 기본값
     }
 
     @Override

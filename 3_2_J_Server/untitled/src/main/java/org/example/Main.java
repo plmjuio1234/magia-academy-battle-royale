@@ -7,6 +7,7 @@ import com.esotericsoftware.kryo.Kryo;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class Main {
     private static Map<Integer, GameRoom> rooms = new HashMap<>();
@@ -34,6 +35,50 @@ public class Main {
 
         private CollisionMap collisionMap;
 
+        // ===== Fog 시스템 (PHASE_24) =====
+        // fog 활성화 순서 (랜덤, town-square는 마지막)
+        List<String> fogActivationOrder = new ArrayList<>();
+        // 현재 활성화된 fog 구역들
+        Set<String> activeFogZones = new HashSet<>();
+        // 게임 경과 시간 (초)
+        float gameTime = 0f;
+        // 다음 fog 활성화 인덱스
+        int nextFogIndex = 0;
+        // fog 활성화 간격 (2분)
+        static final float FOG_INTERVAL = 120f;
+        // fog 데미지 (초당)
+        static final int FOG_DAMAGE_PER_SECOND = 5;
+        // fog 데미지 적용 간격 (서버 틱 기준)
+        float fogDamageTimer = 0f;
+        // 플레이어 HP 관리 (playerId -> HP)
+        Map<Integer, Integer> playerHpMap = new HashMap<>();
+        // 플레이어 최대 HP
+        static final int PLAYER_MAX_HP = 100;
+        // 사망한 플레이어 ID 목록 (순서대로)
+        Set<Integer> deadPlayers = new HashSet<>();
+        // 게임 종료 여부
+        boolean gameEnded = false;
+
+        // 4개 구역 스폰 좌표 (사용자 확인 좌표)
+        static final float[][] SPAWN_ZONES = {
+            {1363f, 2734f},   // 좌상단
+            {2627f, 3019f},   // 우상단
+            {1303f, 1262f},   // 좌하단
+            {2827f, 1237f}    // 우하단
+        };
+
+        /**
+         * 플레이어 스폰 위치를 생성합니다.
+         * 4개 구역 고정 위치 사용 (랜덤 오프셋 제거)
+         */
+        float[] getSpawnPosition(int playerIndex) {
+            int zoneIndex = playerIndex % SPAWN_ZONES.length;
+            float spawnX = SPAWN_ZONES[zoneIndex][0];
+            float spawnY = SPAWN_ZONES[zoneIndex][1];
+
+            return new float[]{spawnX, spawnY};
+        }
+
         static class PlayerPosition {
             float x, y;
             PlayerPosition(float x, float y) {
@@ -52,14 +97,57 @@ public class Main {
 
             // MonsterManager 초기화
             this.monsterManager = new ServerMonsterManager(
-                (roomId, message) -> {
-                    for (PlayerData player : players) {
-                        player.connection.sendTCP(message);
+                new ServerMonsterManager.MessageCallback() {
+                    @Override
+                    public void broadcast(int roomId, Object message) {
+                        for (PlayerData player : players) {
+                            player.connection.sendTCP(message);
+                        }
+                    }
+
+                    @Override
+                    public void sendToPlayer(int playerId, Object message) {
+                        for (PlayerData player : players) {
+                            if (player.id == playerId) {
+                                player.connection.sendTCP(message);
+                                break;
+                            }
+                        }
                     }
                 },
                 collisionMap  //  MonsterManager에도 전달
             );
             this.monsterManager.initializeRoom(roomId);
+
+            // Fog 활성화 순서 초기화 (PHASE_24)
+            initializeFogOrder();
+        }
+
+        /**
+         * fog 활성화 순서를 랜덤으로 생성합니다.
+         * town-square는 마지막에 활성화됩니다.
+         */
+        void initializeFogOrder() {
+            fogActivationOrder.clear();
+            activeFogZones.clear();
+
+            // town-square 제외한 구역들
+            List<String> otherZones = new ArrayList<>();
+            otherZones.add("dormitory");
+            otherZones.add("library");
+            otherZones.add("classroom");
+            otherZones.add("alchemy-room");
+
+            // 랜덤 셔플
+            Collections.shuffle(otherZones);
+
+            // fog 활성화 순서에 추가
+            fogActivationOrder.addAll(otherZones);
+
+            // town-square는 마지막
+            fogActivationOrder.add("town-square");
+
+            System.out.println("[방 " + roomId + "] fog 활성화 순서: " + fogActivationOrder);
         }
 
         boolean addPlayer(PlayerData player) {
@@ -207,6 +295,8 @@ public class Main {
         public int playerId;
         public String playerName;
         public boolean isHost;
+        public float spawnX;  // 스폰 X 좌표
+        public float spawnY;  // 스폰 Y 좌표
 
         public PlayerInfo() {}
     }
@@ -263,6 +353,187 @@ public class Main {
         public SkillCastMsg() {}
     }
 
+    // ===== Fog 시스템 업데이트 (PHASE_24) =====
+    /**
+     * fog 시스템을 업데이트합니다.
+     * 2분마다 새로운 구역의 fog를 활성화하고, 활성화된 구역 내 플레이어에게 데미지를 줍니다.
+     *
+     * @param room 게임방
+     * @param delta 틱 시간 (초)
+     */
+    private static void updateFogSystem(GameRoom room, float delta) {
+        // 게임 시간 업데이트
+        room.gameTime += delta;
+
+        // fog 활성화 체크 (2분마다)
+        if (room.nextFogIndex < room.fogActivationOrder.size()) {
+            float nextActivationTime = (room.nextFogIndex + 1) * GameRoom.FOG_INTERVAL;
+
+            if (room.gameTime >= nextActivationTime) {
+                // 새로운 fog 구역 활성화
+                String zoneName = room.fogActivationOrder.get(room.nextFogIndex);
+                room.activeFogZones.add(zoneName);
+                room.nextFogIndex++;
+
+                // 모든 플레이어에게 fog 활성화 알림
+                FogZoneMsg fogMsg = new FogZoneMsg(zoneName, true, room.gameTime);
+                for (PlayerData player : room.players) {
+                    player.connection.sendTCP(fogMsg);
+                }
+
+                System.out.println("[방 " + room.roomId + "] ★ fog 활성화: " + zoneName +
+                    " (" + room.activeFogZones.size() + "/" + room.fogActivationOrder.size() + ") - 게임시간: " + (int)room.gameTime + "초");
+            }
+        }
+
+        // fog 데미지 처리 (1초마다)
+        room.fogDamageTimer += delta;
+        if (room.fogDamageTimer >= 1.0f) {
+            room.fogDamageTimer = 0f;
+            applyFogDamageToPlayers(room);
+        }
+    }
+
+    /**
+     * 활성화된 fog 구역 내 플레이어에게 데미지를 적용합니다.
+     *
+     * @param room 게임방
+     */
+    private static void applyFogDamageToPlayers(GameRoom room) {
+        // 활성화된 fog 구역이 없으면 리턴
+        if (room.activeFogZones.isEmpty()) {
+            return;
+        }
+
+        // 각 플레이어 체크
+        for (PlayerData player : room.players) {
+            GameRoom.PlayerPosition pos = room.playerPositions.get(player.id);
+            if (pos == null) {
+                continue; // 위치 정보 없음
+            }
+
+            // 플레이어가 어떤 fog 구역에 있는지 확인
+            String playerZone = getPlayerZone(pos.x, pos.y, room.collisionMap);
+
+            // 해당 구역의 fog가 활성화되어 있으면 데미지
+            if (playerZone != null && room.activeFogZones.contains(playerZone)) {
+                // HP 초기화 (없으면)
+                if (!room.playerHpMap.containsKey(player.id)) {
+                    room.playerHpMap.put(player.id, GameRoom.PLAYER_MAX_HP);
+                }
+
+                // 데미지 적용
+                int currentHp = room.playerHpMap.get(player.id);
+                int newHp = Math.max(0, currentHp - GameRoom.FOG_DAMAGE_PER_SECOND);
+                room.playerHpMap.put(player.id, newHp);
+
+                // 데미지 메시지 전송
+                FogDamageMsg damageMsg = new FogDamageMsg(
+                    player.id,
+                    GameRoom.FOG_DAMAGE_PER_SECOND,
+                    newHp,
+                    playerZone
+                );
+                player.connection.sendTCP(damageMsg);
+
+                // 디버그 로그 (매 10초마다만 출력)
+                if ((int)room.gameTime % 10 == 0) {
+                    System.out.println("[방 " + room.roomId + "] fog 데미지: " + player.name +
+                        " (" + playerZone + ") HP: " + newHp);
+                }
+            }
+        }
+    }
+
+    /**
+     * 플레이어의 좌표를 기반으로 어떤 구역에 있는지 판별합니다.
+     * TMX 맵의 fog 레이어 타일 데이터를 기반으로 정확히 판별합니다.
+     *
+     * @param x 플레이어 X 좌표 (픽셀)
+     * @param y 플레이어 Y 좌표 (픽셀)
+     * @param collisionMap 충돌 맵 (fog 구역 데이터 포함)
+     * @return 구역 이름 (null이면 fog 구역 밖)
+     */
+    private static String getPlayerZone(float x, float y, CollisionMap collisionMap) {
+        // CollisionMap의 fog 구역 데이터를 사용하여 정확하게 판별
+        if (collisionMap != null && collisionMap.hasFogZones()) {
+            return collisionMap.getFogZoneAt(x, y);
+        }
+
+        // fog 구역 데이터가 없으면 null 반환 (데미지 없음)
+        return null;
+    }
+
+    /**
+     * 플레이어 사망 체크 및 1등 판정 (PHASE_26)
+     * MonsterManager의 HP를 체크하고 사망 처리를 합니다.
+     */
+    private static void checkPlayerDeathsAndWinner(GameRoom room) {
+        // 생존 플레이어 목록 계산
+        List<PlayerData> alivePlayers = new ArrayList<>();
+        for (PlayerData p : room.players) {
+            if (!room.deadPlayers.contains(p.id)) {
+                // HP 체크 (MonsterManager HP와 Fog HP 둘 다 체크)
+                int monsterHp = room.monsterManager.getPlayerHp(room.roomId, p.id);
+                int fogHp = room.playerHpMap.getOrDefault(p.id, GameRoom.PLAYER_MAX_HP);
+
+                // 둘 중 하나라도 0 이하면 사망
+                int effectiveHp = Math.min(monsterHp, fogHp);
+
+                if (effectiveHp <= 0) {
+                    // 사망 처리
+                    room.deadPlayers.add(p.id);
+
+                    // 사망 순위 = 현재 생존자 수 + 이미 죽은 사람 수
+                    int rank = room.players.size() - room.deadPlayers.size() + 1;
+
+                    // 사망 원인 판별 (fog HP가 더 낮으면 fog 사망)
+                    String killerName = (fogHp <= monsterHp) ? "안개" : "몬스터";
+                    int killerId = -1;  // -1 = 환경 사망
+
+                    // 사망 메시지 전송
+                    PlayerDeathMsg deathMsg = new PlayerDeathMsg(
+                        p.id, p.name,
+                        killerId, killerName,
+                        rank
+                    );
+
+                    for (PlayerData player : room.players) {
+                        player.connection.sendTCP(deathMsg);
+                    }
+
+                    System.out.println("[사망] " + p.name + " (" + killerName + "에게 사망) - 순위: " + rank + "등");
+                } else {
+                    alivePlayers.add(p);
+                }
+            }
+        }
+
+        // 1등 판정: 생존자가 1명만 남으면 우승
+        if (alivePlayers.size() == 1 && room.players.size() > 1) {
+            PlayerData winner = alivePlayers.get(0);
+
+            // 1등 우승 메시지 전송
+            PlayerDeathMsg winMsg = new PlayerDeathMsg(
+                winner.id, winner.name,
+                0, "우승",  // killerId 0 = 우승
+                1  // 1등
+            );
+
+            for (PlayerData player : room.players) {
+                player.connection.sendTCP(winMsg);
+            }
+
+            room.gameEnded = true;
+            System.out.println("[우승] " + winner.name + " - 1등!");
+        }
+        // 모든 플레이어가 죽으면 게임 종료
+        else if (alivePlayers.isEmpty()) {
+            room.gameEnded = true;
+            System.out.println("[게임 종료] 모든 플레이어 사망");
+        }
+    }
+
     public static void main(String[] args) {
         try {
             Server server = new Server(16384, 8192);
@@ -309,6 +580,12 @@ public class Main {
             kryo.register(ProjectileFiredMsg.class);                 // ID: 32
             kryo.register(SetPlayerNameMsg.class);                   // ID: 33
             kryo.register(SetPlayerNameResponse.class);              // ID: 34
+            kryo.register(FogZoneMsg.class);                         // ID: 35 (PHASE_24)
+            kryo.register(FogDamageMsg.class);                       // ID: 36 (PHASE_24)
+            kryo.register(MonsterAttackPlayerMsg.class);             // ID: 37 (PHASE_25)
+            kryo.register(PlayerAttackPlayerMsg.class);              // ID: 38 (PHASE_25 PVP)
+            kryo.register(PlayerDeathMsg.class);                     // ID: 39 (PHASE_25)
+            kryo.register(PlayerLevelUpMsg.class);                   // ID: 40 (레벨업 HP 동기화)
 
             server.addListener(new Listener() {
                 @Override
@@ -459,17 +736,33 @@ public class Main {
                             // 몬스터 시스템 초기화 (50마리 즉시 스폰)
                             System.out.println("[게임 시작] 룸 " + room.roomId + " 초기 몬스터 스폰");
 
+                            // ===== 플레이어 HP 초기화 (PHASE_25) =====
+                            for (PlayerData p : room.players) {
+                                room.monsterManager.initializePlayerHp(room.roomId, p.id);
+                            }
+
                             GameStartNotification notification = new GameStartNotification();
                             notification.startTime = System.currentTimeMillis();
 
-                            // 플레이어 정보 포함
+                            // 플레이어 정보 포함 (스폰 위치 할당)
                             notification.players = new PlayerInfo[room.players.size()];
                             for (int i = 0; i < room.players.size(); i++) {
                                 PlayerInfo info = new PlayerInfo();
                                 info.playerId = room.players.get(i).id;
                                 info.playerName = room.players.get(i).name;  // 서버에 저장된 이름
                                 info.isHost = (room.players.get(i) == room.host);
+
+                                // 스폰 위치 할당 (4개 구역 중 하나)
+                                float[] spawnPos = room.getSpawnPosition(i);
+                                info.spawnX = spawnPos[0];
+                                info.spawnY = spawnPos[1];
+
+                                // 플레이어 위치 초기화 (몬스터 AI용)
+                                room.playerPositions.put(room.players.get(i).id,
+                                    new GameRoom.PlayerPosition(spawnPos[0], spawnPos[1]));
+
                                 notification.players[i] = info;
+                                System.out.println("[스폰] " + info.playerName + " → (" + info.spawnX + ", " + info.spawnY + ")");
                             }
 
                             for (PlayerData p : room.players) {
@@ -536,11 +829,18 @@ public class Main {
 
                         GameRoom room = player.currentRoom;
                         if (room != null && room.isPlaying) {
-                            // 같은 방의 모든 플레이어에게 발사체 정보 전송 (자신 포함)
+                            // 같은 방의 모든 플레이어에게 발사체 정보 전송 (자신 제외 - 자신은 이미 발사체 생성함)
                             for (PlayerData p : room.players) {
-                                p.connection.sendTCP(msg);
+                                if (p.id != msg.playerId) {
+                                    p.connection.sendTCP(msg);
+                                }
                             }
-                            System.out.println("[발사체] " + player.name + "이(가) " + msg.skillType + " 발사 (타겟: " + msg.targetMonsterId + ")");
+                            // 로그 출력 (PVP/몬스터 구분)
+                            if (msg.targetPlayerId >= 0) {
+                                System.out.println("[PVP 발사체] " + player.name + "이(가) " + msg.skillType + " 발사 (타겟 플레이어: " + msg.targetPlayerId + ")");
+                            } else {
+                                System.out.println("[발사체] " + player.name + "이(가) " + msg.skillType + " 발사 (타겟 몬스터: " + msg.targetMonsterId + ")");
+                            }
                         }
                     }
 
@@ -569,8 +869,8 @@ public class Main {
                                     Math.pow(attackMsg.attackerY - targetMonster.y, 2)
                                 );
 
-                                // 공격 사거리: 150 픽셀 (스킬 범위 기준)
-                                if (distance <= 150.0) {
+                                // 공격 사거리: 250 픽셀 (세로 화면 기준 + 여유)
+                                if (distance <= 250.0) {
                                     // 데미지 적용 (ServerMonsterManager를 통해 처리)
                                     int damageAmount = (int) attackMsg.skillDamage;
                                     room.monsterManager.damageMonster(room.roomId, attackMsg.monsterId, damageAmount, player.id);
@@ -579,6 +879,43 @@ public class Main {
                                         ", 데미지=" + damageAmount);
                                 }
                                 // 공격 실패 로그 제거 (범위 밖 공격은 무시)
+                            }
+                        }
+                    }
+
+                    // ===== PVP 공격 처리 (PHASE_25) =====
+                    else if (object instanceof PlayerAttackPlayerMsg) {
+                        PlayerAttackPlayerMsg msg = (PlayerAttackPlayerMsg) object;
+                        msg.attackerId = connection.getID();  // 공격자 ID 설정
+
+                        GameRoom room = player.currentRoom;
+                        if (room != null && room.isPlaying) {
+                            // 타겟 플레이어 찾기
+                            PlayerData target = null;
+                            for (PlayerData p : room.players) {
+                                if (p.id == msg.targetId) {
+                                    target = p;
+                                    break;
+                                }
+                            }
+
+                            if (target != null) {
+                                // MonsterManager에서 HP 감소
+                                int currentHp = room.monsterManager.getPlayerHp(room.roomId, target.id);
+                                int newHp = Math.max(0, currentHp - msg.damage);
+                                room.monsterManager.setPlayerHp(room.roomId, target.id, newHp);
+
+                                // 응답 메시지 설정
+                                msg.newHp = newHp;
+                                msg.maxHp = GameRoom.PLAYER_MAX_HP;
+
+                                // 모든 플레이어에게 브로드캐스트
+                                for (PlayerData p : room.players) {
+                                    p.connection.sendTCP(msg);
+                                }
+
+                                System.out.println("[PVP] " + player.name + " → " + target.name +
+                                    " (" + msg.damage + " 데미지, HP: " + newHp + ")");
                             }
                         }
                     }
@@ -615,6 +952,23 @@ public class Main {
                         }
 
                         connection.sendTCP(response);
+                    }
+
+                    // ===== 레벨업 HP 동기화 처리 =====
+                    else if (object instanceof PlayerLevelUpMsg) {
+                        PlayerLevelUpMsg msg = (PlayerLevelUpMsg) object;
+
+                        GameRoom room = player.currentRoom;
+                        if (room != null && room.isPlaying) {
+                            // 플레이어 HP 맵 업데이트
+                            room.playerHpMap.put(player.id, msg.newCurrentHp);
+
+                            // MonsterManager의 HP도 업데이트
+                            room.monsterManager.setPlayerHp(room.roomId, player.id, msg.newCurrentHp);
+
+                            System.out.println("[레벨업] " + player.name + " → Lv." + msg.newLevel +
+                                ", HP: " + msg.newCurrentHp + "/" + msg.newMaxHp);
+                        }
                     }
                 }
             });
@@ -660,6 +1014,14 @@ public class Main {
 
                                     // 몬스터 매니저 업데이트 (플레이어 위치 전달)
                                     room.monsterManager.update(0.05f, room.roomId, activePlayerIds, playerPosMap);
+
+                                    // ===== Fog 시스템 업데이트 (PHASE_24) =====
+                                    updateFogSystem(room, 0.05f);
+
+                                    // ===== 플레이어 사망 체크 및 1등 판정 (PHASE_26) =====
+                                    if (!room.gameEnded) {
+                                        checkPlayerDeathsAndWinner(room);
+                                    }
                                 }
                             }
                         }

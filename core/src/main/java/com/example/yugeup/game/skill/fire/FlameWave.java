@@ -4,7 +4,6 @@ import com.badlogic.gdx.math.Vector2;
 import com.example.yugeup.game.player.Player;
 import com.example.yugeup.game.skill.ElementType;
 import com.example.yugeup.game.skill.ElementalSkill;
-import com.example.yugeup.game.skill.SkillZone;
 import com.example.yugeup.utils.Constants;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -14,15 +13,15 @@ import java.util.List;
  * 플레임 웨이브 스킬 클래스
  *
  * 불 원소의 두 번째 스킬입니다.
- * 선택한 방향으로 부채꼴 범위의 불 지역을 생성합니다.
+ * 선택한 방향으로 투사체가 날아가며 지나가는 적에게 도트딜을 줍니다.
  *
  * @author YuGeup Development Team
  * @version 1.0
  */
 public class FlameWave extends ElementalSkill {
 
-    // 활성 지역 목록
-    private transient List<FlameWaveZone> activeZones;
+    // 활성 투사체 목록
+    private transient List<FlameWaveProjectile> activeProjectiles;
 
     /**
      * 플레임 웨이브 생성자
@@ -31,9 +30,9 @@ public class FlameWave extends ElementalSkill {
      */
     public FlameWave(Player owner) {
         super(5102, "플레임 웨이브", Constants.FLAME_WAVE_MANA_COST,
-              Constants.FLAME_WAVE_COOLDOWN, 50,
+              Constants.FLAME_WAVE_COOLDOWN, Constants.FLAME_WAVE_DAMAGE,
               ElementType.FIRE, owner);
-        this.activeZones = new ArrayList<>();
+        this.activeProjectiles = new ArrayList<>();
     }
 
     /**
@@ -58,16 +57,17 @@ public class FlameWave extends ElementalSkill {
         Vector2 casterPos = new Vector2(caster.getX(), caster.getY());
         Vector2 direction = targetPosition.cpy().sub(casterPos).nor();
 
-        // 플레임 웨이브 지역 생성
-        FlameWaveZone zone = new FlameWaveZone(
-            casterPos.x,
-            casterPos.y,
-            direction,
+        // 플레임 웨이브 투사체 생성 (도트딜)
+        FlameWaveProjectile projectile = new FlameWaveProjectile(
+            casterPos,
+            direction.x,
+            direction.y,
             getDamage(),
-            1.5f  // 지속 시간
+            Constants.FLAME_WAVE_SPEED,
+            Constants.FLAME_WAVE_RANGE
         );
 
-        activeZones.add(zone);
+        activeProjectiles.add(projectile);
 
         // 쿨타임 시작
         currentCooldown = getCooldown();
@@ -87,33 +87,33 @@ public class FlameWave extends ElementalSkill {
     public void update(float delta) {
         super.update(delta);
 
-        // 지역 업데이트
-        updateZones(delta);
+        // 투사체 업데이트
+        updateProjectiles(delta);
     }
 
     /**
-     * 활성 지역을 업데이트합니다.
+     * 활성 투사체를 업데이트합니다.
      *
      * @param delta 이전 프레임으로부터의 시간 (초)
      */
-    private void updateZones(float delta) {
-        Iterator<FlameWaveZone> iterator = activeZones.iterator();
+    private void updateProjectiles(float delta) {
+        Iterator<FlameWaveProjectile> iterator = activeProjectiles.iterator();
         while (iterator.hasNext()) {
-            FlameWaveZone zone = iterator.next();
-            zone.update(delta);
+            FlameWaveProjectile projectile = iterator.next();
+            projectile.update(delta);
 
-            if (!zone.isActive()) {
+            if (!projectile.isAlive()) {
                 iterator.remove();
             }
         }
     }
 
     /**
-     * 활성 지역 목록을 반환합니다.
+     * 활성 투사체 목록을 반환합니다.
      *
-     * @return 지역 리스트
+     * @return 투사체 리스트
      */
-    public List<FlameWaveZone> getActiveZones() {
-        return activeZones;
+    public List<FlameWaveProjectile> getActiveProjectiles() {
+        return activeProjectiles;
     }
 }
