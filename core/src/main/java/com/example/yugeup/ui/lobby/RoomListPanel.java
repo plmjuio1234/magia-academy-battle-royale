@@ -3,6 +3,7 @@ package com.example.yugeup.ui.lobby;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Rectangle;
 import org.example.Main.RoomInfo;
@@ -45,6 +46,9 @@ public class RoomListPanel {
     private ShapeRenderer shapeRenderer;
     private BitmapFont font;
 
+    // 아틀라스 저장
+    private TextureAtlas atlas;
+
     /**
      * RoomListPanel 생성자
      *
@@ -54,12 +58,13 @@ public class RoomListPanel {
      * @param height 패널 높이
      * @param font 사용할 폰트
      */
-    public RoomListPanel(float x, float y, float width, float height, BitmapFont font) {
+    public RoomListPanel(float x, float y, float width, float height, BitmapFont font, TextureAtlas atlas) {
         this.x = x;
         this.y = y;
         this.width = width;
         this.height = height;
         this.font = font;
+        this.atlas = atlas;
 
         this.rooms = new RoomInfo[0];
         this.scrollOffset = 0;
@@ -109,9 +114,36 @@ public class RoomListPanel {
      */
     private void updateButtonBounds() {
         // 상단 버튼들
-        this.refreshButtonBounds.set(x + 100, y + height - 70, 200, 50);
-        this.createButtonBounds.set(x + 350, y + height - 70, 200, 50);
-        this.backButtonBounds.set(x + 600, y + height - 70, 200, 50);
+        // 패널 테두리와의 여백, 버튼 크기 등 정의
+        float margin = 40f;
+        float verticalMargin = 160f; // 상단 버튼을 위한 세로 여백
+        float buttonSize = 64f * 3;
+
+        // 1. 뒤로가기 버튼: 패널의 '좌측 상단'에 배치
+        this.backButtonBounds.set(
+            x + margin - 300f,
+            y + height - verticalMargin - buttonSize, // 패널 상단에서 세로 여백만큼 아래로
+            buttonSize,
+            buttonSize
+        );
+
+        // 2. 새로고침 버튼: '뒤로가기 버튼 바로 아래'에 배치
+        this.refreshButtonBounds.set(
+            backButtonBounds.x,
+            backButtonBounds.y - buttonSize - 450f, // 뒤로가기 버튼 위치에서 아래로
+            buttonSize,
+            buttonSize
+        );
+
+        // 3. 방 만들기 버튼: 패널의 '우측 하단'에 배치
+        float createBtnWidth = 400f;
+        float createBtnHeight = createBtnWidth * (32f/92f);
+        this.createButtonBounds.set(
+            x + width - createBtnWidth + margin, // 패널 오른쪽 끝에서 안으로
+            y + margin - 220f,
+            createBtnWidth,
+            createBtnHeight
+        );
 
         // 각 방 행의 [참가] 버튼 (컬럼 위치와 동일하게)
         float col4_joinButton = x + width - 100;  // 텍스트 위치와 동일
@@ -150,24 +182,48 @@ public class RoomListPanel {
         }
 
         // 상단 버튼들 (상단)
-        font.setColor(Color.BLACK);
-        font.draw(batch, "[새로고침]", x + 100, y + height - 40);
-        font.draw(batch, "[방 만들기]", x + 350, y + height - 40);
-        font.draw(batch, "[타이틀로]", x + 600, y + height - 40);
+        if (atlas != null) {
+
+            // 새로고침 버튼 그리기
+            batch.draw(
+                atlas.findRegion("refresh-button-defualt"), // 우선 기본 이미지만 표시
+                refreshButtonBounds.x, refreshButtonBounds.y, refreshButtonBounds.width, refreshButtonBounds.height
+            );
+
+            // 방 만들기 버튼 그리기
+            batch.draw(
+                atlas.findRegion("create-room-button-defualt"), // 우선 기본 이미지만 표시
+                createButtonBounds.x, createButtonBounds.y, createButtonBounds.width, createButtonBounds.height
+            );
+
+            // 타이틀로(뒤로가기) 버튼 그리기
+            batch.draw(
+                atlas.findRegion("backspace-button-defualt"), // 우선 기본 이미지만 표시
+                backButtonBounds.x, backButtonBounds.y, backButtonBounds.width, backButtonBounds.height
+            );
+        } else {
+            // 아틀라스 로드 실패 시, 예전처럼 글자로 버튼을 표시합니다.
+            font.setColor(Color.BLACK);
+            font.draw(batch, "[새로고침]", x + 100, y + height - 40);
+            font.draw(batch, "[방 만들기]", x + 350, y + height - 40);
+            font.draw(batch, "[타이틀로]", x + 600, y + height - 40);
+        }
 
         // 방 목록 제목
         font.setColor(Color.DARK_GRAY);
-        font.draw(batch, "방 목록", x + 100, y + height - 100);
+        font.getData().setScale(1.3f);
+        font.draw(batch, "방 목록", x + 20, y + height - 170);
 
         // 동적 컬럼 위치 계산 (패널 너비에 비례)
         float col1_roomName = x + 50;                     // 방 제목 (왼쪽)
         float col2_players = x + width * 0.5f;            // 인원 (중간)
-        float col3_status = x + width * 0.65f;            // 상태 (65% 지점)
+        float col3_status = x + width * 0.65f;            // 상태 (50% 지점)
         float col4_joinButton = x + width - 100;          // 참가 버튼 (오른쪽, 여유 확보)
 
         // 테이블 헤더 (방 목록 제목 아래 충분한 간격)
-        float tableStartY = y + height - 160;
+        float tableStartY = y + height - 240;
         font.setColor(Color.BLACK);
+        font.getData().setScale(1.0f);
         font.draw(batch, "방 제목", col1_roomName, tableStartY);
         font.draw(batch, "인원", col2_players, tableStartY);
         font.draw(batch, "상태", col3_status, tableStartY);
