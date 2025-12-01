@@ -74,8 +74,10 @@ public class Fireball extends ElementalSkill {
         // 쿨타임 시작
         currentCooldown = getCooldown();
 
-        // 네트워크 동기화
-        sendSkillCastToNetwork(targetPosition);
+        // 네트워크 동기화 (확장 버전 - 속도, 크기, 수명 포함)
+        float lifetime = Constants.FIREBALL_RANGE / Constants.FIREBALL_SPEED;
+        sendProjectileSkillToNetwork(casterPos, targetPosition,
+            Constants.FIREBALL_SPEED, Constants.FIREBALL_HITBOX_SIZE, lifetime);
 
         System.out.println("[Fireball] 파이어볼 시전! 방향: (" + direction.x + ", " + direction.y + ")");
     }
