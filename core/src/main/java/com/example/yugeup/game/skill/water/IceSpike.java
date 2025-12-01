@@ -68,8 +68,11 @@ public class IceSpike extends ElementalSkill {
         // 쿨타임 시작
         currentCooldown = getCooldown();
 
-        // 네트워크 동기화
-        sendSkillCastToNetwork(targetPosition);
+        // 네트워크 동기화 (다방향 투사체)
+        float lifetime = Constants.ICE_SPIKE_RANGE / Constants.ICE_SPIKE_SPEED;
+        sendMultiProjectileSkillToNetwork(casterPos, targetPosition,
+            Constants.ICE_SPIKE_SPEED, Constants.ICE_SPIKE_HITBOX_SIZE, lifetime,
+            3, Constants.ICE_SPIKE_ANGLE_SPREAD);
 
         System.out.println("[IceSpike] 아이스 스파이크 3방향 시전! 기준 각도: " + baseAngle);
     }

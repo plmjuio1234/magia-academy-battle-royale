@@ -287,21 +287,22 @@ public class Player {
         // 마나 재생 (PHASE_19) - 로컬 플레이어만
         if (!isRemote) {
             updateManaRegeneration(delta);
-            updateHpRegeneration(delta);
+            // HP 재생은 서버가 관리하므로 클라이언트에서 비활성화
+            // updateHpRegeneration(delta);
         }
     }
 
     /**
      * 마나 자동 재생 (PHASE_19)
      *
-     * 기본 재생: 1 MP/초
+     * 기본 재생: 5 MP/초 (대폭 증가)
      * 업그레이드 보너스: +1 MP/초씩 추가
      *
      * @param delta 이전 프레임으로부터의 시간 (초)
      */
     private void updateManaRegeneration(float delta) {
-        // 기본 마나 재생: 1 MP/초
-        float baseManaRegen = 1.0f;
+        // 기본 마나 재생: 5 MP/초 (기존 1 → 5)
+        float baseManaRegen = 5.0f;
 
         // 업그레이드 보너스 추가
         float totalManaRegen = baseManaRegen;

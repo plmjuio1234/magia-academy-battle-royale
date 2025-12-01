@@ -52,8 +52,10 @@ public class Flood extends ElementalSkill {
         activeProjectiles.add(projectile);
         currentCooldown = getCooldown();
 
-        // 네트워크 동기화
-        sendSkillCastToNetwork(targetPosition);
+        // 네트워크 동기화 (확장 버전)
+        float lifetime = Constants.FLOOD_RANGE / Constants.FLOOD_SPEED;
+        sendProjectileSkillToNetwork(casterPos, targetPosition,
+            Constants.FLOOD_SPEED, Constants.FLOOD_HITBOX_WIDTH, lifetime);
 
         System.out.println("[Flood] 플러드 시전! 방향: (" + direction.x + ", " + direction.y + ")");
     }

@@ -11,6 +11,7 @@ import com.example.yugeup.network.NetworkManager;
 import com.example.yugeup.utils.Constants;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -53,6 +54,11 @@ public class StormZone {
     // 몬스터 리스트
     private List<Monster> monsterList;
 
+    // PVP 피격판정용
+    private Map<Integer, Player> remotePlayers;
+    private Player myPlayer;
+    private Set<Integer> recentlyHitPlayers;
+
     /**
      * 폭풍 지역 생성자
      *
@@ -69,6 +75,7 @@ public class StormZone {
         this.isActive = true;
         this.tickRate = Constants.STORM_TICK_RATE;
         this.recentlyHitMonsters = new HashSet<>();
+        this.recentlyHitPlayers = new HashSet<>();
 
         // 히트박스 64x64에 스케일 적용
         this.renderSize = Constants.STORM_HITBOX_SIZE * Constants.STORM_SCALE;
@@ -86,6 +93,17 @@ public class StormZone {
      */
     public void setMonsterList(List<Monster> monsters) {
         this.monsterList = monsters;
+    }
+
+    /**
+     * 원격 플레이어 목록 설정 (PVP용)
+     *
+     * @param remotePlayers 원격 플레이어 맵
+     * @param myPlayer 스킬 시전자
+     */
+    public void setPlayerList(Map<Integer, Player> remotePlayers, Player myPlayer) {
+        this.remotePlayers = remotePlayers;
+        this.myPlayer = myPlayer;
     }
 
     /**
@@ -117,10 +135,12 @@ public class StormZone {
         if (tickTimer >= tickRate) {
             tickTimer = 0f;
             recentlyHitMonsters.clear();  // 새 틱에서 다시 맞을 수 있음
+            recentlyHitPlayers.clear();
         }
 
         // 도트딜 적용
         applyDamageToNearbyMonsters();
+        applyDamageToNearbyPlayers();  // PVP 데미지
     }
 
     /**
@@ -149,6 +169,42 @@ public class StormZone {
                 }
                 recentlyHitMonsters.add(monster.getMonsterId());
                 System.out.println("[Storm] 도트딜! 몬스터 " + monster.getMonsterId() + " 데미지: " + damagePerTick);
+            }
+        }
+    }
+
+    /**
+     * 주변 플레이어에게 데미지 적용 (PVP)
+     */
+    private void applyDamageToNearbyPlayers() {
+        if (remotePlayers == null || remotePlayers.isEmpty()) return;
+
+        NetworkManager nm = NetworkManager.getInstance();
+        float hitboxRadius = renderSize / 2f;
+
+        for (Player player : remotePlayers.values()) {
+            if (player == null || player.isDead()) continue;
+
+            // 자기 자신 제외
+            if (myPlayer != null && player.getPlayerId() == myPlayer.getPlayerId()) continue;
+
+            // 이번 틱에 이미 피격한 플레이어 제외
+            if (recentlyHitPlayers.contains(player.getPlayerId())) continue;
+
+            // 거리 계산
+            float dx = player.getX() - position.x;
+            float dy = player.getY() - position.y;
+            float distance = (float) Math.sqrt(dx * dx + dy * dy);
+
+            // 충돌 판정
+            if (distance <= hitboxRadius + 20f) {
+                // PVP 데미지 (0.5배)
+                int pvpDamage = (int) (damagePerTick * Constants.PVP_DAMAGE_MULTIPLIER);
+                if (nm != null) {
+                    nm.sendPvpAttack(player.getPlayerId(), pvpDamage, "Storm");
+                    System.out.println("[Storm] PVP 도트딜! 플레이어 " + player.getPlayerId() + " 데미지: " + pvpDamage);
+                }
+                recentlyHitPlayers.add(player.getPlayerId());
             }
         }
     }

@@ -65,8 +65,8 @@ public class Storm extends ElementalSkill {
         activeZones.add(zone);
         currentCooldown = getCooldown();
 
-        // 네트워크 동기화
-        sendSkillCastToNetwork(targetPosition);
+        // 네트워크 동기화 (플레이어 추적형 Zone)
+        sendPlayerFollowZoneSkillToNetwork(Constants.STORM_HITBOX_SIZE, Constants.STORM_DURATION);
 
         System.out.println("[Storm] 폭풍 시전! 8초간 플레이어 추적 + 속도 50% 증가");
     }

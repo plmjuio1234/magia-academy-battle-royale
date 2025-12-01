@@ -69,8 +69,9 @@ public class StoneShield extends ElementalSkill {
         // 쿨타임 시작
         currentCooldown = getCooldown();
 
-        // 네트워크 동기화
-        sendSkillCastToNetwork(targetPosition);
+        // 네트워크 동기화 (플레이어 추적형 Zone)
+        // 스톤 실드는 크기가 플레이어와 동일 (고정 크기 사용)
+        sendPlayerFollowZoneSkillToNetwork(64f, Constants.STONE_SHIELD_DURATION);
 
         System.out.println("[StoneShield] 스톤 실드 시전! 8초간 피해 50% 감소");
     }

@@ -68,8 +68,9 @@ public class Inferno extends ElementalSkill {
         // 쿨타임 시작
         currentCooldown = getCooldown();
 
-        // 네트워크 동기화
-        sendSkillCastToNetwork(targetPosition);
+        // 네트워크 동기화 (고정 Zone)
+        Vector2 zonePos = new Vector2(caster.getX(), caster.getY());
+        sendFixedZoneSkillToNetwork(zonePos, Constants.INFERNO_RANGE, animDuration);
 
         System.out.println("[Inferno] 인페르노 시전! 위치: (" + caster.getX() + ", " + caster.getY() + ")");
     }

@@ -4,6 +4,7 @@ import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.example.yugeup.game.monster.Monster;
+import com.example.yugeup.game.player.Player;
 import com.example.yugeup.game.skill.SkillEffectManager;
 import com.example.yugeup.game.skill.SkillZone;
 import com.example.yugeup.network.NetworkManager;
@@ -74,27 +75,52 @@ public class InfernoZone extends SkillZone {
     }
 
     /**
-     * 즉발 데미지 적용 (범위 내 모든 몬스터에게 한 번만)
+     * 즉발 데미지 적용 (범위 내 모든 몬스터와 플레이어에게 한 번만)
      */
     private void applyInstantDamage() {
-        if (monsterList == null || monsterList.isEmpty()) return;
-
         NetworkManager nm = NetworkManager.getInstance();
 
-        for (Monster monster : monsterList) {
-            if (monster == null || monster.isDead()) continue;
+        // 몬스터 데미지
+        if (monsterList != null && !monsterList.isEmpty()) {
+            for (Monster monster : monsterList) {
+                if (monster == null || monster.isDead()) continue;
 
-            // 범위 체크
-            float dx = monster.getX() - position.x;
-            float dy = monster.getY() - position.y;
-            float distance = (float) Math.sqrt(dx * dx + dy * dy);
+                // 범위 체크
+                float dx = monster.getX() - position.x;
+                float dy = monster.getY() - position.y;
+                float distance = (float) Math.sqrt(dx * dx + dy * dy);
 
-            if (distance <= Constants.INFERNO_RANGE) {
-                // 서버로 공격 메시지 전송
-                if (nm != null) {
-                    nm.sendAttackMessage(monster.getMonsterId(), damagePerTick, position.x, position.y);
+                if (distance <= Constants.INFERNO_RANGE) {
+                    // 서버로 공격 메시지 전송
+                    if (nm != null) {
+                        nm.sendAttackMessage(monster.getMonsterId(), damagePerTick, position.x, position.y);
+                    }
+                    System.out.println("[InfernoZone] 몬스터 " + monster.getMonsterId() + " 히트! 데미지: " + damagePerTick);
                 }
-                System.out.println("[InfernoZone] 몬스터 " + monster.getMonsterId() + " 히트! 데미지: " + damagePerTick);
+            }
+        }
+
+        // 플레이어 데미지 (PVP)
+        if (remotePlayers != null && !remotePlayers.isEmpty()) {
+            for (Player player : remotePlayers.values()) {
+                if (player == null || player.isDead()) continue;
+
+                // 자기 자신 제외
+                if (myPlayer != null && player.getPlayerId() == myPlayer.getPlayerId()) continue;
+
+                // 범위 체크
+                float dx = player.getX() - position.x;
+                float dy = player.getY() - position.y;
+                float distance = (float) Math.sqrt(dx * dx + dy * dy);
+
+                if (distance <= Constants.INFERNO_RANGE) {
+                    // PVP 데미지 (0.5배)
+                    int pvpDamage = (int) (damagePerTick * Constants.PVP_DAMAGE_MULTIPLIER);
+                    if (nm != null) {
+                        nm.sendPvpAttack(player.getPlayerId(), pvpDamage, "Inferno");
+                    }
+                    System.out.println("[InfernoZone] PVP 히트! 플레이어 " + player.getPlayerId() + " 데미지: " + pvpDamage);
+                }
             }
         }
     }

@@ -73,8 +73,10 @@ public class ChainLightning extends ElementalSkill {
         // 쿨타임 시작
         currentCooldown = getCooldown();
 
-        // 네트워크 동기화
-        sendSkillCastToNetwork(targetPosition);
+        // 네트워크 동기화 (확장 버전)
+        float lifetime = Constants.CHAIN_LIGHTNING_RANGE / Constants.CHAIN_LIGHTNING_SPEED;
+        sendProjectileSkillToNetwork(casterPos, targetPosition,
+            Constants.CHAIN_LIGHTNING_SPEED, Constants.CHAIN_LIGHTNING_HITBOX_SIZE, lifetime);
 
         System.out.println("[ChainLightning] 체인 라이트닝 시전! 방향: (" + direction.x + ", " + direction.y + ")");
     }

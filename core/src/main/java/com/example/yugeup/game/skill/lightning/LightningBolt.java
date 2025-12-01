@@ -53,10 +53,10 @@ public class LightningBolt extends ElementalSkill {
 
     /**
      * 라이트닝 볼트를 시전합니다.
-     * 선택한 방향의 사거리 끝 지점에 낙뢰를 생성합니다.
+     * 사용자가 터치한 위치에 즉시 낙뢰를 떨어뜨립니다.
      *
      * @param caster 시전자
-     * @param targetPosition 목표 위치 (방향 계산용)
+     * @param targetPosition 목표 위치 (사용자 터치 위치)
      */
     @Override
     public void cast(Player caster, Vector2 targetPosition) {
@@ -68,31 +68,24 @@ public class LightningBolt extends ElementalSkill {
             return;
         }
 
-        // 시전 위치 및 방향 계산
-        Vector2 casterPos = new Vector2(caster.getX(), caster.getY());
-        Vector2 direction = targetPosition.cpy().sub(casterPos).nor();
-
-        // 방향으로 사거리만큼 이동한 위치에 낙뢰 생성
-        float range = Constants.LIGHTNING_BOLT_TARGETING_RANGE;
-        float targetX = casterPos.x + direction.x * range;
-        float targetY = casterPos.y + direction.y * range;
-
-        // 낙뢰 생성 (방향 끝 지점)
+        // 낙뢰 생성 (사용자가 터치한 위치 그대로)
         LightningBoltZone zone = new LightningBoltZone(
-            targetX,
-            targetY,
+            targetPosition.x,
+            targetPosition.y,
             getDamage()
         );
         zone.setMonsterList(monsterList);
         activeZones.add(zone);
 
-        System.out.println("[LightningBolt] 라이트닝 볼트 시전! 목표 위치: (" + targetX + ", " + targetY + ")");
+        System.out.println("[LightningBolt] 라이트닝 볼트 시전! 목표 위치: (" + targetPosition.x + ", " + targetPosition.y + ")");
 
         // 쿨타임 시작
         currentCooldown = getCooldown();
 
-        // 네트워크 동기화
-        sendSkillCastToNetwork(targetPosition);
+        // 네트워크 동기화 (고정 Zone)
+        // 번개 애니메이션 지속시간 (약 0.5초)
+        float animDuration = 0.5f;
+        sendFixedZoneSkillToNetwork(targetPosition, Constants.LIGHTNING_BOLT_HITBOX_SIZE, animDuration);
     }
 
     /**

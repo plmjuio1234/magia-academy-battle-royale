@@ -515,12 +515,14 @@ public class GameScreen implements Screen {
             ((com.example.yugeup.game.skill.earth.RockSmash) skill).setMonsterList(monsters);
             for (com.example.yugeup.game.skill.earth.RockSmashZone zone : ((com.example.yugeup.game.skill.earth.RockSmash) skill).getActiveZones()) {
               zone.setMonsterList(monsters);
+              zone.setPlayerList(remotePlayers, myPlayer);
             }
           } else if (skill instanceof com.example.yugeup.game.skill.lightning.LightningBolt) {
             // 스킬 자체에 몬스터 리스트 주입 (타겟팅용)
             ((com.example.yugeup.game.skill.lightning.LightningBolt) skill).setMonsterList(monsters);
             for (com.example.yugeup.game.skill.lightning.LightningBoltZone zone : ((com.example.yugeup.game.skill.lightning.LightningBolt) skill).getActiveZones()) {
               zone.setMonsterList(monsters);
+              zone.setPlayerList(remotePlayers, myPlayer);
             }
           } else if (skill instanceof com.example.yugeup.game.skill.lightning.ChainLightning) {
             // 투사체에 몬스터 리스트 주입
@@ -535,34 +537,44 @@ public class GameScreen implements Screen {
           if (skill instanceof com.example.yugeup.game.skill.fire.FlameWave) {
             for (com.example.yugeup.game.skill.fire.FlameWaveProjectile proj : ((com.example.yugeup.game.skill.fire.FlameWave) skill).getActiveProjectiles()) {
               proj.setMonsterList(monsters);
+              proj.setPlayerList(new java.util.ArrayList<>(remotePlayers.values()));
+              proj.setOwnerPlayerId(myPlayer.getPlayerId());
             }
           } else if (skill instanceof com.example.yugeup.game.skill.fire.Inferno) {
             for (com.example.yugeup.game.skill.fire.InfernoZone zone : ((com.example.yugeup.game.skill.fire.Inferno) skill).getActiveZones()) {
               zone.setMonsterList(monsters);
+              zone.setPlayerList(remotePlayers, myPlayer);
             }
           } else if (skill instanceof com.example.yugeup.game.skill.water.Flood) {
             for (com.example.yugeup.game.skill.water.FloodProjectile projectile : ((com.example.yugeup.game.skill.water.Flood) skill).getActiveProjectiles()) {
               projectile.setMonsterList(monsters);
+              projectile.setPlayerList(new java.util.ArrayList<>(remotePlayers.values()));
+              projectile.setOwnerPlayerId(myPlayer.getPlayerId());
             }
           } else if (skill instanceof com.example.yugeup.game.skill.wind.Tornado) {
             for (com.example.yugeup.game.skill.wind.TornadoProjectile projectile : ((com.example.yugeup.game.skill.wind.Tornado) skill).getActiveProjectiles()) {
               projectile.setMonsterList(monsters);
+              projectile.setPlayerList(new java.util.ArrayList<>(remotePlayers.values()));
+              projectile.setOwnerPlayerId(myPlayer.getPlayerId());
             }
           } else if (skill instanceof com.example.yugeup.game.skill.wind.Storm) {
             for (com.example.yugeup.game.skill.wind.StormZone zone : ((com.example.yugeup.game.skill.wind.Storm) skill).getActiveZones()) {
               zone.setMonsterList(monsters);
+              zone.setPlayerList(remotePlayers, myPlayer);
             }
           } else if (skill instanceof com.example.yugeup.game.skill.earth.EarthSpike) {
             // 스킬 자체에 몬스터 리스트 주입
             ((com.example.yugeup.game.skill.earth.EarthSpike) skill).setMonsterList(monsters);
             for (com.example.yugeup.game.skill.earth.EarthSpikeZone zone : ((com.example.yugeup.game.skill.earth.EarthSpike) skill).getActiveZones()) {
               zone.setMonsterList(monsters);
+              zone.setPlayerList(remotePlayers, myPlayer);
             }
           } else if (skill instanceof com.example.yugeup.game.skill.lightning.ThunderStorm) {
             // 스킬 자체에 몬스터 리스트 주입
             ((com.example.yugeup.game.skill.lightning.ThunderStorm) skill).setMonsterList(monsters);
             for (com.example.yugeup.game.skill.lightning.ThunderStormZone zone : ((com.example.yugeup.game.skill.lightning.ThunderStorm) skill).getActiveZones()) {
               zone.setMonsterList(monsters);
+              zone.setPlayerList(remotePlayers, myPlayer);
             }
           }
 
@@ -872,6 +884,11 @@ public class GameScreen implements Screen {
         monster.setTargetPosition(updateMsg.x, updateMsg.y);
         monster.setMaxHealth(updateMsg.maxHp);
 
+        // 서버 state 동기화 (ATTACKING 등의 상태 반영)
+        if (updateMsg.state != null && !updateMsg.state.isEmpty()) {
+          monster.setStateFromString(updateMsg.state);
+        }
+
         // HP는 최근 데미지 메시지 후 200ms 경과 시에만 업데이트
         // (데미지 메시지와 업데이트 메시지의 순서가 뒤바뀌는 문제 방지)
         Long lastDamage = lastDamageTimestamp.get(updateMsg.monsterId);
@@ -897,13 +914,28 @@ public class GameScreen implements Screen {
       // 원격 플레이어 찾기
       Player remotePlayer = remotePlayers.get(skillMsg.playerId);
       if (remotePlayer != null) {
-        // 원격 스킬 이펙트 생성 (SkillCastMsg의 상세 정보 포함)
-        com.example.yugeup.game.effect.RemoteSkillEffect effect =
-          new com.example.yugeup.game.effect.RemoteSkillEffect(
-            skillMsg,
-            remotePlayer.getX(), remotePlayer.getY()
-          );
-        remoteSkillEffects.add(effect);
+        // 스킬 타입에 따른 처리
+        int skillType = skillMsg.skillType;
+
+        if (skillType == com.example.yugeup.game.skill.ElementalSkill.SKILL_TYPE_PROJECTILE_MULTI) {
+          // 다방향 발사체 (IceSpike 등): 여러 개의 이펙트 생성
+          int count = skillMsg.projectileCount > 0 ? skillMsg.projectileCount : 3;
+          for (int i = 0; i < count; i++) {
+            com.example.yugeup.game.effect.RemoteSkillEffect effect =
+              new com.example.yugeup.game.effect.RemoteSkillEffect(skillMsg, remotePlayer.getX(), remotePlayer.getY(), i);
+            remoteSkillEffects.add(effect);
+          }
+        } else if (skillType == com.example.yugeup.game.skill.ElementalSkill.SKILL_TYPE_ZONE_PLAYER_FOLLOW) {
+          // 플레이어 추적형 Zone (Storm, StoneShield): 플레이어 참조 전달
+          com.example.yugeup.game.effect.RemoteSkillEffect effect =
+            new com.example.yugeup.game.effect.RemoteSkillEffect(skillMsg, remotePlayer);
+          remoteSkillEffects.add(effect);
+        } else {
+          // 일반 투사체, 고정 Zone, 이동 Zone: 기존 방식
+          com.example.yugeup.game.effect.RemoteSkillEffect effect =
+            new com.example.yugeup.game.effect.RemoteSkillEffect(skillMsg, remotePlayer.getX(), remotePlayer.getY());
+          remoteSkillEffects.add(effect);
+        }
       }
     }
 

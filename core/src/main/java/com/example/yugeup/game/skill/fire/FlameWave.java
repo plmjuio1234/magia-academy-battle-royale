@@ -72,8 +72,10 @@ public class FlameWave extends ElementalSkill {
         // 쿨타임 시작
         currentCooldown = getCooldown();
 
-        // 네트워크 동기화
-        sendSkillCastToNetwork(targetPosition);
+        // 네트워크 동기화 (확장 버전)
+        float lifetime = Constants.FLAME_WAVE_RANGE / Constants.FLAME_WAVE_SPEED;
+        sendProjectileSkillToNetwork(casterPos, targetPosition,
+            Constants.FLAME_WAVE_SPEED, Constants.FLAME_WAVE_HITBOX_SIZE, lifetime);
 
         System.out.println("[FlameWave] 플레임 웨이브 시전! 방향: (" + direction.x + ", " + direction.y + ")");
     }

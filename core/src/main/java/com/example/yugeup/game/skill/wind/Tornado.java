@@ -64,8 +64,10 @@ public class Tornado extends ElementalSkill {
         activeProjectiles.add(projectile);
         currentCooldown = getCooldown();
 
-        // 네트워크 동기화
-        sendSkillCastToNetwork(targetPosition);
+        // 네트워크 동기화 (확장 버전)
+        float lifetime = Constants.TORNADO_RANGE / Constants.TORNADO_SPEED;
+        sendProjectileSkillToNetwork(casterPos, targetPosition,
+            Constants.TORNADO_SPEED, Constants.TORNADO_HITBOX_SIZE, lifetime);
 
         System.out.println("[Tornado] 토네이도 시전! 방향: (" + direction.x + ", " + direction.y + ")");
     }

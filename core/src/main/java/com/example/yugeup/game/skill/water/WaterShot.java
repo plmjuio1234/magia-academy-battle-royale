@@ -44,8 +44,10 @@ public class WaterShot extends ElementalSkill {
         activeProjectiles.add(projectile);
         currentCooldown = getCooldown();
 
-        // 네트워크 동기화
-        sendSkillCastToNetwork(targetPosition);
+        // 네트워크 동기화 (확장 버전)
+        float lifetime = Constants.WATER_SHOT_RANGE / Constants.WATER_SHOT_SPEED;
+        sendProjectileSkillToNetwork(casterPos, targetPosition,
+            Constants.WATER_SHOT_SPEED, Constants.WATER_SHOT_HITBOX_SIZE, lifetime);
 
         System.out.println("[WaterShot] 워터 샷 시전!");
     }
