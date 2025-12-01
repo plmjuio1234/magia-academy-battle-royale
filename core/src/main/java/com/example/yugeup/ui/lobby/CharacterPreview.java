@@ -145,7 +145,7 @@ public class CharacterPreview {
 
         // 닉네임 표시 (캐릭터 아래, 중앙 정렬)
         font.setColor(Color.BLACK);
-        String nicknameText = nickname.isEmpty() ? "닉네임: (미설정)" : "닉네임: " + nickname;
+        String nicknameText = nickname.isEmpty() ? "닉네임 미설정" : nickname;
         float nicknameWidth = nicknameText.length() * 18;
         float nicknameX = x + (width - nicknameWidth) / 2;
         font.draw(batch, nicknameText, nicknameX, characterY - 30);
