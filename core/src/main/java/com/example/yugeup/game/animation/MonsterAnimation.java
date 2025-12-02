@@ -29,6 +29,10 @@ public class MonsterAnimation {
     // 상태별 애니메이션
     private Map<MonsterState, Animation<TextureRegion>> animations;
 
+    // 방향별 이동 애니메이션 (캐싱)
+    private Animation<TextureRegion> moveLeftAnim;
+    private Animation<TextureRegion> moveRightAnim;
+
     // 현재 상태 경과 시간
     private float stateTime = 0f;
 
@@ -88,8 +92,12 @@ public class MonsterAnimation {
         }
 
         // MOVING: move_right 프레임 사용 (기본)
-        animations.put(MonsterState.MOVING,
-            createAnimation(typePrefix + "-move_right-", 4, 0.15f));
+        moveRightAnim = createAnimation(typePrefix + "-move_right-", 4, 0.15f);
+        moveLeftAnim = createAnimation(typePrefix + "-move_left-", 4, 0.15f);
+        animations.put(MonsterState.MOVING, moveRightAnim);
+
+        // PURSUING: MOVING과 동일 (서버에서 추적 상태 전송)
+        animations.put(MonsterState.PURSUING, moveRightAnim);
 
         // ATTACKING: 골렘만 attack 애니메이션 있음
         if (type == MonsterType.GOLEM) {
@@ -215,17 +223,11 @@ public class MonsterAnimation {
         String typePrefix = type.name().toLowerCase();
         String directionSuffix = (direction == 0) ? "left" : "right";
 
-        // MOVING 상태: 방향별 이동 애니메이션
-        if (state == MonsterState.MOVING) {
-            String frameName = typePrefix + "-move_" + directionSuffix + "-0";
-
-            // 해당 방향 프레임이 있는지 확인
-            if (atlas.findRegion(frameName) != null) {
-                Animation<TextureRegion> dirAnimation = createAnimation(
-                    typePrefix + "-move_" + directionSuffix + "-", 4, 0.15f);
-                if (dirAnimation != null) {
-                    return dirAnimation.getKeyFrame(stateTime, true);
-                }
+        // MOVING/PURSUING 상태: 캐싱된 방향별 이동 애니메이션 사용
+        if (state == MonsterState.MOVING || state == MonsterState.PURSUING) {
+            Animation<TextureRegion> dirAnim = (direction == 0) ? moveLeftAnim : moveRightAnim;
+            if (dirAnim != null) {
+                return dirAnim.getKeyFrame(stateTime, true);
             }
         }
 

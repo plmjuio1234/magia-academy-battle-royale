@@ -35,6 +35,8 @@ public class RemoteSkillEffect {
     private float speed = 200f;
     private Vector2 currentPosition;
     private float size = 48f;
+    private float width = 48f;   // 렌더링 너비 (비율 지원)
+    private float height = 48f;  // 렌더링 높이 (비율 지원)
 
     // 스프라이트 뒤집기 (왼쪽 방향 시 Y축 플립)
     private boolean flipY = false;
@@ -220,16 +222,16 @@ public class RemoteSkillEffect {
                 // 원본: FIREBALL_HITBOX_SIZE(12) * FIREBALL_SCALE(4) = 48px
                 animation = manager.getAnimation("fireball-loop");
                 skillType = ElementalSkill.SKILL_TYPE_PROJECTILE;
-                size = 48f;
-                speed = 200f;
+                width = height = size = 48f;
+                speed = 240f;  // 원본 200 * 1.2 (네트워크 보정)
                 break;
             case 5102: // FlameWave - 투사체 (도트딜)
                 // 원본: FLAME_WAVE_HITBOX_SIZE(16) * FLAME_WAVE_SCALE(4) = 64px
                 // 원본: 왼쪽 방향(90~270도) 시 scaleY = -1
                 animation = manager.getAnimation("flame_wave-loop");
                 skillType = ElementalSkill.SKILL_TYPE_PROJECTILE;
-                size = 64f;
-                speed = 200f;
+                width = height = size = 64f;
+                speed = 240f;  // 원본 200 * 1.2 (네트워크 보정)
                 flipY = true;  // 왼쪽 방향 시 Y축 플립
                 break;
             case 5103: // Inferno - 고정 Zone
@@ -237,7 +239,7 @@ public class RemoteSkillEffect {
                 // 원본: 각도 고정, Y오프셋 40f (여기서는 생략)
                 animation = manager.getAnimation("inferno");
                 skillType = ElementalSkill.SKILL_TYPE_ZONE_FIXED;
-                size = 180f;
+                width = height = size = 180f;
                 maxLifetime = 1.5f;
                 break;
 
@@ -246,36 +248,40 @@ public class RemoteSkillEffect {
                 // 원본: WATER_SHOT_HITBOX_SIZE(24) * WATER_SHOT_SCALE(2.5) = 60px
                 animation = manager.getAnimation("water_ball-loop");
                 skillType = ElementalSkill.SKILL_TYPE_PROJECTILE;
-                size = 60f;
-                speed = 150f;
+                width = height = size = 60f;
+                speed = 180f;  // 원본 150 * 1.2 (네트워크 보정)
                 break;
             case 5202: // IceSpike - 다방향 투사체
                 // 원본: ICE_SPIKE_HITBOX_SIZE(10) * ICE_SPIKE_SCALE(3) = 30px
                 // 원본: 이동은 하지만 각도 고정 (회전 안함)
                 animation = manager.getAnimation("ice_spike-loop");
                 skillType = ElementalSkill.SKILL_TYPE_PROJECTILE_MULTI;
-                size = 30f;
-                speed = 300f;
+                width = height = size = 30f;
+                speed = 360f;  // 원본 300 * 1.2 (네트워크 보정)
                 fixedAngle = true;  // 각도 고정
                 break;
             case 5203: // Flood - 투사체 (관통 도트딜)
-                // 원본: max(FLOOD_HITBOX_WIDTH(60), FLOOD_HITBOX_HEIGHT(90)) * FLOOD_SCALE(3) = 270px
+                // 원본: FLOOD_HITBOX_WIDTH(60)*3=180, FLOOD_HITBOX_HEIGHT(90)*3=270
                 // 원본: 이동은 하지만 각도 고정 (회전 안함)
                 animation = manager.getAnimation("flood_loop");
                 skillType = ElementalSkill.SKILL_TYPE_PROJECTILE;
+                width = 180f;   // 60 * 3
+                height = 270f;  // 90 * 3
                 size = 270f;
-                speed = 80f;
+                speed = 96f;   // 원본 80 * 1.2 (네트워크 보정)
                 fixedAngle = true;  // 각도 고정
                 break;
 
             // ===== 바람 원소 =====
             case 5301: // AirSlash - 투사체
-                // 원본: max(AIR_SLASH_HITBOX_WIDTH(24), AIR_SLASH_HITBOX_HEIGHT(10)) * AIR_SLASH_SCALE(3) = 72px
+                // 원본: AIR_SLASH_HITBOX_WIDTH(24)*3=72, AIR_SLASH_HITBOX_HEIGHT(10)*3=30
                 // 원본: 회전 O, 왼쪽(90~270도) 시 scaleY = -1
                 animation = manager.getAnimation("air_slash-loop");
                 skillType = ElementalSkill.SKILL_TYPE_PROJECTILE;
+                width = 72f;   // 24 * 3
+                height = 30f;  // 10 * 3
                 size = 72f;
-                speed = 200f;
+                speed = 240f;  // 원본 200 * 1.2 (네트워크 보정)
                 flipY = true;  // 왼쪽 방향 시 Y축 플립
                 break;
             case 5302: // Tornado - 투사체
@@ -283,8 +289,8 @@ public class RemoteSkillEffect {
                 // 원본: 이동은 하지만 각도 고정
                 animation = manager.getAnimation("tornado-loop");
                 skillType = ElementalSkill.SKILL_TYPE_PROJECTILE;
-                size = 54f;
-                speed = 200f;
+                width = height = size = 54f;
+                speed = 240f;  // 원본 200 * 1.2 (네트워크 보정)
                 fixedAngle = true;  // 각도 고정
                 break;
             case 5303: // Storm - 플레이어 추적 Zone
@@ -292,7 +298,7 @@ public class RemoteSkillEffect {
                 // 원본: 플레이어 추적, 각도 고정
                 animation = manager.getAnimation("storm-loop");
                 skillType = ElementalSkill.SKILL_TYPE_ZONE_PLAYER_FOLLOW;
-                size = 128f;
+                width = height = size = 128f;
                 maxLifetime = 8.0f;
                 break;
 
@@ -302,7 +308,7 @@ public class RemoteSkillEffect {
                 // 원본: 고정 Zone, 각도 고정
                 animation = manager.getAnimation("lightning_volt");
                 skillType = ElementalSkill.SKILL_TYPE_ZONE_FIXED;
-                size = 96f;
+                width = height = size = 96f;
                 maxLifetime = 0.56f;  // 7프레임 * 0.08초
                 break;
             case 5402: // ChainLightning - 투사체
@@ -310,14 +316,16 @@ public class RemoteSkillEffect {
                 // 원본: 회전 O (방향각)
                 animation = manager.getAnimation("chain_lightning-projectile");
                 skillType = ElementalSkill.SKILL_TYPE_PROJECTILE;
-                size = 100f;
-                speed = 180f;
+                width = height = size = 100f;
+                speed = 216f;  // 원본 180 * 1.2 (네트워크 보정)
                 break;
             case 5403: // ThunderStorm - 이동 Zone
-                // 원본: 64 * max(THUNDER_STORM_LIGHTNING_SCALE_X(3.5), _Y(1.8)) = 224px
+                // 원본: 64 * THUNDER_STORM_LIGHTNING_SCALE_X(3.5) = 224, 64 * _Y(1.8) = 115
                 // 원본: 이동 Zone, 각도 고정
                 animation = manager.getAnimation("thunder_storm-lightning");
                 skillType = ElementalSkill.SKILL_TYPE_ZONE_MOVING;
+                width = 224f;   // 64 * 3.5
+                height = 115f;  // 64 * 1.8
                 size = 224f;
                 speed = 20f;
                 maxLifetime = 10.0f;  // 사거리 200 / 속도 20
@@ -330,16 +338,18 @@ public class RemoteSkillEffect {
                 // 원본: 고정 Zone, 각도 고정
                 animation = manager.getAnimation("rock_smash-start");
                 skillType = ElementalSkill.SKILL_TYPE_ZONE_FIXED;
-                size = 96f;
+                width = height = size = 96f;
                 maxLifetime = 1.5f;
                 break;
             case 5002: // EarthSpike - 이동 Zone
-                // 원본: max(EARTH_SPIKE_HITBOX_WIDTH(36), _HEIGHT(24)) * EARTH_SPIKE_SCALE(3) = 108px
+                // 원본: EARTH_SPIKE_HITBOX_WIDTH(36)*3=108, _HEIGHT(24)*3=72
                 // 원본: 이동 Zone, 각도 고정
                 animation = manager.getAnimation("earth_spike");
                 skillType = ElementalSkill.SKILL_TYPE_ZONE_MOVING;
+                width = 108f;   // 36 * 3
+                height = 72f;   // 24 * 3
                 size = 108f;
-                speed = 250f;
+                speed = 300f;  // 원본 250 * 1.2 (네트워크 보정)
                 fixedAngle = true;  // 각도 고정
                 break;
             case 5003: // StoneShield - 플레이어 추적 Zone
@@ -347,7 +357,7 @@ public class RemoteSkillEffect {
                 // 원본: 플레이어 추적, 각도 고정
                 animation = manager.getAnimation("stone_shield-loop");
                 skillType = ElementalSkill.SKILL_TYPE_ZONE_PLAYER_FOLLOW;
-                size = 77f;
+                width = height = size = 77f;
                 maxLifetime = 8.0f;
                 break;
         }
@@ -414,8 +424,9 @@ public class RemoteSkillEffect {
             angle = direction.angleDeg();
         }
 
-        // 렌더링 크기 (원본 스킬과 동일하게)
-        float renderSize = size;
+        // 렌더링 크기 (원본 스킬과 동일한 비율 사용)
+        float renderWidth = this.width;
+        float renderHeight = this.height;
 
         // Y축 플립 결정 (왼쪽 방향 90~270도 시)
         float scaleY = 1f;
@@ -424,12 +435,12 @@ public class RemoteSkillEffect {
         }
 
         batch.draw(frame,
-            currentPosition.x - renderSize / 2,
-            currentPosition.y - renderSize / 2,
-            renderSize / 2,
-            renderSize / 2,
-            renderSize,
-            renderSize,
+            currentPosition.x - renderWidth / 2,
+            currentPosition.y - renderHeight / 2,
+            renderWidth / 2,
+            renderHeight / 2,
+            renderWidth,
+            renderHeight,
             1f,
             scaleY,
             angle);
