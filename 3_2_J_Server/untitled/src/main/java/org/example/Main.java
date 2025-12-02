@@ -461,7 +461,7 @@ public class Main {
                 );
                 player.connection.sendTCP(regenMsg);
 
-                System.out.println("[HP 재생] " + player.name + ": " + currentHp + " → " + newHp + " HP");
+                //System.out.println("[HP 재생] " + player.name + ": " + currentHp + " → " + newHp + " HP");
             }
         }
     }
@@ -825,7 +825,7 @@ public class Main {
                                     new GameRoom.PlayerPosition(spawnPos[0], spawnPos[1]));
 
                                 notification.players[i] = info;
-                                System.out.println("[스폰] " + info.playerName + " → (" + info.spawnX + ", " + info.spawnY + ")");
+                                //System.out.println("[스폰] " + info.playerName + " → (" + info.spawnX + ", " + info.spawnY + ")");
                             }
 
                             for (PlayerData p : room.players) {
@@ -881,7 +881,7 @@ public class Main {
                                     p.connection.sendTCP(msg);
                                 }
                             }
-                            System.out.println("[스킬] " + player.name + "이(가) 스킬 #" + msg.skillId + " 시전");
+                            //System.out.println("[스킬] " + player.name + "이(가) 스킬 #" + msg.skillId + " 시전");
                         }
                     }
 
@@ -898,12 +898,14 @@ public class Main {
                                     p.connection.sendTCP(msg);
                                 }
                             }
+
+                            /*
                             // 로그 출력 (PVP/몬스터 구분)
                             if (msg.targetPlayerId >= 0) {
                                 System.out.println("[PVP 발사체] " + player.name + "이(가) " + msg.skillType + " 발사 (타겟 플레이어: " + msg.targetPlayerId + ")");
                             } else {
                                 System.out.println("[발사체] " + player.name + "이(가) " + msg.skillType + " 발사 (타겟 몬스터: " + msg.targetMonsterId + ")");
-                            }
+                            }*/
                         }
                     }
 
@@ -938,8 +940,8 @@ public class Main {
                                     int damageAmount = (int) attackMsg.skillDamage;
                                     room.monsterManager.damageMonster(room.roomId, attackMsg.monsterId, damageAmount, player.id);
 
-                                    System.out.println("[공격 성공] " + player.name + " → 몬스터 ID=" + attackMsg.monsterId +
-                                        ", 데미지=" + damageAmount);
+                                    //System.out.println("[공격 성공] " + player.name + " → 몬스터 ID=" + attackMsg.monsterId +
+                                    //    ", 데미지=" + damageAmount);
                                 }
                                 // 공격 실패 로그 제거 (범위 밖 공격은 무시)
                             }
@@ -977,8 +979,8 @@ public class Main {
                                     p.connection.sendTCP(msg);
                                 }
 
-                                System.out.println("[PVP] " + player.name + " → " + target.name +
-                                    " (" + msg.damage + " 데미지, HP: " + newHp + ")");
+                                //System.out.println("[PVP] " + player.name + " → " + target.name +
+                                //    " (" + msg.damage + " 데미지, HP: " + newHp + ")");
                             }
                         }
                     }

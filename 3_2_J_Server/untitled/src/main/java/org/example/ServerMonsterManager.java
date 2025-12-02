@@ -69,7 +69,7 @@ public class ServerMonsterManager {
         Map<Integer, Integer> hpMap = roomPlayerHp.get(roomId);
         if (hpMap != null) {
             hpMap.put(playerId, PLAYER_MAX_HP);
-            System.out.println("[ServerMonsterManager] 플레이어 " + playerId + " HP 초기화: " + PLAYER_MAX_HP);
+            //System.out.println("[ServerMonsterManager] 플레이어 " + playerId + " HP 초기화: " + PLAYER_MAX_HP);
         }
     }
 
@@ -128,7 +128,7 @@ public class ServerMonsterManager {
             if (monstersToSpawn > 0) {
                 // 한 번에 최대 5마리까지만 스폰 (서버 부하 방지)
                 int spawnCount = Math.min(monstersToSpawn, 5);
-                System.out.println("[몬스터 스폰] 룸 " + roomId + ": " + spawnCount + "마리 스폰 시도 (현재: " + monsters.size() + "/" + MAX_MONSTERS_PER_ROOM + ")");
+                //System.out.println("[몬스터 스폰] 룸 " + roomId + ": " + spawnCount + "마리 스폰 시도 (현재: " + monsters.size() + "/" + MAX_MONSTERS_PER_ROOM + ")");
 
                 for (int i = 0; i < spawnCount; i++) {
                     spawnMonster(roomId, activePlayers);
@@ -172,8 +172,8 @@ public class ServerMonsterManager {
                     );
                     messageCallback.broadcast(roomId, attackMsg);
 
-                    System.out.println("[몬스터 공격] " + monster.getType() + "(ID:" + monster.id +
-                        ") → 플레이어 " + targetId + " (데미지: " + damage + ", HP: " + newHp + "/" + PLAYER_MAX_HP + ")");
+                    //System.out.println("[몬스터 공격] " + monster.getType() + "(ID:" + monster.id +
+                    //    ") → 플레이어 " + targetId + " (데미지: " + damage + ", HP: " + newHp + "/" + PLAYER_MAX_HP + ")");
                 }
             }
 
@@ -184,7 +184,7 @@ public class ServerMonsterManager {
 
             // 죽은 몬스터 처리
             if (!monster.isAlive()) {
-                System.out.println("[몬스터 사망] 룸 " + roomId + ": ID=" + monster.id + " 타입=" + monster.getType() + " (남은 몬스터: " + (monsters.size() - 1) + "마리)");
+                //System.out.println("[몬스터 사망] 룸 " + roomId + ": ID=" + monster.id + " 타입=" + monster.getType() + " (남은 몬스터: " + (monsters.size() - 1) + "마리)");
                 // 아이템 드롭 위치 전송
                 sendMonsterDeath(roomId, monster);
                 iterator.remove();
@@ -233,7 +233,7 @@ public class ServerMonsterManager {
 
         // 유효한 위치를 못 찾으면 스폰 포기
         if (!validPosition) {
-            System.err.println("[몬스터 스폰] 룸 " + roomId + ": 유효한 스폰 위치를 찾지 못함 (50번 시도 실패)");
+            //System.err.println("[몬스터 스폰] 룸 " + roomId + ": 유효한 스폰 위치를 찾지 못함 (50번 시도 실패)");
             return;
         }
 
@@ -276,8 +276,8 @@ public class ServerMonsterManager {
         msg.monsterType = monster.getType();
         msg.elementType = monster.getElementType();
 
-        System.out.println("[서버] 몬스터 스폰 메시지 전송 - ID: " + monster.id + ", 타입: " + monster.getType() +
-            ", 위치: (" + monster.x + "," + monster.y + ")");
+        //System.out.println("[서버] 몬스터 스폰 메시지 전송 - ID: " + monster.id + ", 타입: " + monster.getType() +
+        //    ", 위치: (" + monster.x + "," + monster.y + ")");
         messageCallback.broadcast(roomId, msg);
     }
 
@@ -309,8 +309,8 @@ public class ServerMonsterManager {
         msg.dropY = monster.y;
         msg.killerId = monster.getLastAttackerId();  // 막타친 플레이어 ID
 
-        System.out.println("[몬스터 사망] 룸 " + roomId + ": 몬스터 ID=" + monster.id +
-            ", 타입=" + monster.getType() + ", killerId=" + msg.killerId + " (lastAttackerId=" + monster.getLastAttackerId() + ")");
+        //System.out.println("[몬스터 사망] 룸 " + roomId + ": 몬스터 ID=" + monster.id +
+        //    ", 타입=" + monster.getType() + ", killerId=" + msg.killerId + " (lastAttackerId=" + monster.getLastAttackerId() + ")");
 
         messageCallback.broadcast(roomId, msg);
     }
@@ -340,9 +340,9 @@ public class ServerMonsterManager {
 
                 messageCallback.broadcast(roomId, damageMsg);
 
-                System.out.println("[ServerMonsterManager] 몬스터 피격: ID=" + monster.id +
-                    ", 데미지=" + damage + ", 공격자 ID=" + attackerId +
-                    ", 남은 HP=" + monster.hp + "/" + monster.maxHp + ", lastAttackerId=" + monster.getLastAttackerId());
+                //System.out.println("[ServerMonsterManager] 몬스터 피격: ID=" + monster.id +
+                //    ", 데미지=" + damage + ", 공격자 ID=" + attackerId +
+                //    ", 남은 HP=" + monster.hp + "/" + monster.maxHp + ", lastAttackerId=" + monster.getLastAttackerId());
                 break;
             }
         }
