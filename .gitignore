@@ -155,15 +155,10 @@ Thumbs.db
 /.kotlin/
 /assets/assets.txt
 
-## APK and generated files:
-*.apk
-*.ap_
-output-metadata.json
-main_converted.png
-*.converted.png
-
-## Logs:
-*.log
+## Excluded files:
+.claude/
+총정리.md
+CLAUDE.md
 
 ## Special cases:
 

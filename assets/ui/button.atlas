@@ -1,0 +1,62 @@
+button.png
+size: 504, 192
+format: RGBA8888
+filter: Linear, Linear
+repeat: none
+pma: false
+backspace-button-defualt
+  bounds: 0, 0, 48, 48
+backspace-button-hover
+  bounds: 48, 0, 48, 48
+cancel-button-defualt
+  bounds: 320, 0, 92, 32
+cancel-button-hover
+  bounds: 412, 0, 92, 32
+change-button-defualt
+  bounds: 0, 64, 92, 32
+change-button-hover
+  bounds: 92, 64, 92, 32
+create-room-button-defualt
+  bounds: 184, 64, 92, 32
+create-room-button-hover
+  bounds: 276, 64, 92, 32
+exit-button-defualt
+  bounds: 368, 64, 92, 32
+exit-button-hover
+  bounds: 0, 96, 92, 32
+game-start-button-defualt
+  bounds: 92, 96, 92, 32
+game-start-button-hover
+  bounds: 184, 96, 92, 32
+name-change-button-defualt
+  bounds: 276, 96, 92, 32
+name-change-button-hover
+  bounds: 368, 96, 92, 32
+ok-button-defualt
+  bounds: 0, 128, 92, 32
+ok-button-hover
+  bounds: 92, 128, 92, 32
+ready-button-defualt
+  bounds: 184, 128, 92, 32
+ready-button-hover
+  bounds: 276, 128, 92, 32
+refresh-button-defualt
+  bounds: 96, 0, 48, 48
+refresh-button-hover
+  bounds: 144, 0, 48, 48
+room-exit-button-defualt
+  bounds: 368, 128, 92, 32
+room-exit-button-hover
+  bounds: 0, 160, 92, 32
+room_out-default
+  bounds: 192, 0, 64, 64
+room_out-hover
+  bounds: 256, 0, 64, 64
+setting-button-defualt
+  bounds: 92, 160, 92, 32
+setting-button-hover
+  bounds: 184, 160, 92, 32
+start-button-defualt
+  bounds: 276, 160, 92, 32
+start-button-hover
+  bounds: 368, 160, 92, 32

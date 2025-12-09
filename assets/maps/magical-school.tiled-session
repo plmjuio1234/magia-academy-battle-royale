@@ -1,0 +1,173 @@
+{
+    "Map/SizeTest": {
+        "height": 4300,
+        "width": 2
+    },
+    "activeFile": "magical-school-map.tmx",
+    "expandedProjectPaths": [
+        "."
+    ],
+    "fileStates": {
+        "TX Plant.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "TX Tileset Grass.tsx": {
+            "scaleInDock": 0.75,
+            "scaleInEditor": 1
+        },
+        "TopDownHouse_DoorsAndWindows.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "TopDownHouse_FloorsAndWalls.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 2
+        },
+        "TopDownHouse_FurnitureState1.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 3
+        },
+        "TopDownHouse_FurnitureState2.tsx": {
+            "scaleInDock": 2,
+            "scaleInEditor": 3
+        },
+        "TopDownHouse_SmallItems.tsx": {
+            "scaleInDock": 2,
+            "scaleInEditor": 5.5
+        },
+        "character.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "door-frame.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 11
+        },
+        "door-frame1.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "door.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "door1.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "floor-marble.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 4,
+            "scaleInEditor": 8
+        },
+        "floor-wood.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 1,
+            "scaleInEditor": 8
+        },
+        "fog.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "magical-school-map.tmx": {
+            "expandedGroupLayers": [
+                23
+            ],
+            "scale": 0.25,
+            "selectedLayer": 12,
+            "viewCenter": {
+                "x": 2534,
+                "y": 1590
+            }
+        },
+        "open-door-wall.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "schoolmap..tmx": {
+            "scale": 0.2080078125,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 1999.9248826291082,
+                "y": 2002.3286384976527
+            }
+        },
+        "schoolmap.tmx": {
+            "expandedGroupLayers": [
+                14,
+                13
+            ],
+            "expandedObjectLayers": [
+                13
+            ],
+            "scale": 0.25,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 2000,
+                "y": 1998
+            }
+        },
+        "small-item.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 4
+        },
+        "stair1.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "stair2.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "statue.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 4
+        },
+        "wall-frame.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1.5
+        },
+        "wall.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 1,
+            "scaleInEditor": 8
+        }
+    },
+    "last.exportedFilePath": "C:/Users/thee1/Documents/학교/3학년/2학기/안드로이드/프로젝트/sheet/map",
+    "last.imagePath": "C:/Users/thee1/Documents/학교/3학년/2학기/안드로이드/프로젝트/sheet/map",
+    "map.height": 250,
+    "map.lastUsedExportFilter": "Tiled map files (*.tmx *.xml)",
+    "map.lastUsedFormat": "tmx",
+    "map.tileHeight": 16,
+    "map.tileWidth": 16,
+    "map.width": 250,
+    "openFiles": [
+        "door-frame1.tsx",
+        "TopDownHouse_FurnitureState1.tsx",
+        "TX Tileset Grass.tsx",
+        "magical-school-map.tmx",
+        "TX Plant.tsx",
+        "fog.tsx"
+    ],
+    "project": "magical-school.tiled-project",
+    "recentFiles": [
+        "door-frame1.tsx",
+        "TopDownHouse_FurnitureState1.tsx",
+        "TX Tileset Grass.tsx",
+        "fog.tsx",
+        "TX Plant.tsx",
+        "magical-school-map.tmx",
+        "wall-frame.tsx",
+        "small-item.tsx",
+        "statue.tsx",
+        "TopDownHouse_FloorsAndWalls.tsx",
+        "wall.tsx",
+        "TopDownHouse_FurnitureState2.tsx"
+    ],
+    "tileset.lastUsedFormat": "tsx",
+    "tileset.tileSize": {
+        "height": 16,
+        "width": 16
+    }
+}
